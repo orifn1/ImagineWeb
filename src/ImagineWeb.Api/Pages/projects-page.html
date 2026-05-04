@@ -1,0 +1,356 @@
+<div class="page-header">
+    <h1><i class="bi bi-collection me-2"></i>Projects</h1>
+    <p>All your Clarify &amp; Build sessions &mdash; track, open, redeploy, and manage here</p>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2 px-3">
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <div class="input-group input-group-sm" style="max-width:260px">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" id="projectSearch" class="form-control" placeholder="Search projects..." oninput="filterProjects()"/>
+            </div>
+            <div class="d-flex gap-1 flex-wrap" id="statusFilters">
+                <button class="btn btn-sm btn-outline-secondary filter-pill active" data-status="all" onclick="setFilter('all',this)">All</button>
+                <button class="btn btn-sm btn-outline-success filter-pill" data-status="Deployed" onclick="setFilter('Deployed',this)"><i class="bi bi-globe me-1"></i>Live</button>
+                <button class="btn btn-sm btn-outline-warning filter-pill" data-status="generating" onclick="setFilter('generating',this)"><i class="bi bi-gear me-1"></i>In Progress</button>
+                <button class="btn btn-sm btn-outline-info filter-pill" data-status="AwaitingClarification" onclick="setFilter('AwaitingClarification',this)"><i class="bi bi-clipboard-check me-1"></i>Awaiting</button>
+                <button class="btn btn-sm btn-outline-danger filter-pill" data-status="failed" onclick="setFilter('failed',this)"><i class="bi bi-x-circle me-1"></i>Failed</button>
+            </div>
+            <select id="userFilter" class="form-select form-select-sm d-none" style="max-width:220px" onchange="filterProjects()">
+                <option value="">All Users</option>
+            </select>
+            <button id="btnClaimOrphans" class="btn btn-sm btn-outline-warning d-none" onclick="claimOrphans()">
+                <i class="bi bi-person-plus me-1"></i>Claim ownerless projects
+            </button>
+            <button id="btnCaptureScreenshots" class="btn btn-sm btn-outline-info d-none" onclick="captureScreenshots()">
+                <i class="bi bi-camera me-1"></i>Capture screenshots
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="projectsList" class="row g-3">
+    <div class="col-md-6 col-lg-4"><div class="card skeleton skeleton-card"><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-text" style="width:80%"></div><div class="skeleton skeleton-text" style="width:50%"></div></div></div>
+    <div class="col-md-6 col-lg-4"><div class="card skeleton skeleton-card"><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-text" style="width:70%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div></div>
+    <div class="col-md-6 col-lg-4"><div class="card skeleton skeleton-card"><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-text" style="width:75%"></div><div class="skeleton skeleton-text" style="width:55%"></div></div></div>
+</div>
+
+<style>
+.project-thumb { position: relative; overflow: hidden; border-radius: 0.5rem 0.5rem 0 0; background: linear-gradient(135deg, rgba(79,70,229,0.08), rgba(6,182,212,0.08)); aspect-ratio: 16/10; display: flex; align-items: center; justify-content: center; }
+.project-thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease; }
+.project-thumb:hover img { transform: scale(1.5); }
+.project-thumb .thumb-placeholder { color: rgba(79,70,229,0.25); font-size: 2rem; }
+.project-thumb .thumb-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 60%, rgba(0,0,0,0.4)); opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+.project-thumb:hover .thumb-overlay { opacity: 1; }
+</style>
+
+<script>
+let allSessions = [];
+let activeFilter = 'all';
+let userMap = {};
+let subMap = {};
+
+
+const isAdmin = window.__aitk_isAdmin || false;
+
+const STATUS_INFO = {
+    'AwaitingClarification': { label: 'Awaiting Answers',  cls: 'bg-info',             icon: 'bi-clipboard-check', color: '#0dcaf0' },
+    'ClarificationComplete': { label: 'Ready to Generate', cls: 'bg-primary',           icon: 'bi-check-circle',    color: '#0d6efd' },
+    'Generating':            { label: 'Generating',        cls: 'bg-warning text-dark', icon: 'bi-gear',            color: '#ffc107' },
+    'GenerationComplete':    { label: 'Complete',          cls: 'bg-success',           icon: 'bi-check2-all',      color: '#198754' },
+    'Improving':             { label: 'Improving',         cls: 'bg-warning text-dark', icon: 'bi-arrow-repeat',    color: '#ffc107' },
+    'Deploying':             { label: 'Deploying',         cls: 'bg-warning text-dark', icon: 'bi-cloud-upload',    color: '#ffc107' },
+    'Deployed':              { label: 'Live',              cls: 'bg-success',           icon: 'bi-globe',           color: '#198754' },
+    'TornDown':              { label: 'Torn Down',         cls: 'bg-secondary',         icon: 'bi-cloud-slash',     color: '#6c757d' },
+    'DeployFailed':          { label: 'Deploy Failed',     cls: 'bg-danger',            icon: 'bi-x-circle',        color: '#dc3545' },
+    'Failed':                { label: 'Failed',            cls: 'bg-danger',            icon: 'bi-x-circle',        color: '#dc3545' },
+    'Clarifying':            { label: 'Clarifying',        cls: 'bg-info',             icon: 'bi-chat-dots',       color: '#0dcaf0' },
+    'ReadyToGenerate':       { label: 'Ready to Generate', cls: 'bg-primary',           icon: 'bi-check-circle',    color: '#0d6efd' },
+    'PromptGenerated':       { label: 'Prompt Ready',      cls: 'bg-primary',           icon: 'bi-file-earmark-text', color: '#0d6efd' },
+    'Implementing':          { label: 'Implementing',      cls: 'bg-warning text-dark', icon: 'bi-gear',            color: '#ffc107' },
+    'AwaitingApproval':      { label: 'Awaiting Approval', cls: 'bg-info',             icon: 'bi-hand-thumbs-up',  color: '#0dcaf0' }
+};
+
+function esc(text) {
+    const el = document.createElement('div');
+    el.textContent = String(text);
+    return el.innerHTML;
+}
+
+async function loadProjects() {
+    try {
+        const [clarifyRes, ideaRes, usersRes, subsRes] = await Promise.all([
+            fetch('/api/clarify'),
+            fetch('/api/idea'),
+            fetch('/api/auth/users').catch(() => ({ ok: false })),
+            fetch('/projects/subscriptions').catch(() => ({ ok: false }))
+        ]);
+
+        const clarify = await clarifyRes.json();
+        const ideas = await ideaRes.json();
+
+        if (usersRes.ok) {
+            const users = await usersRes.json();
+            users.forEach(u => { userMap[u.id] = u.email; });
+        }
+        if (subsRes.ok) {
+            const subs = await subsRes.json();
+            subs.forEach(s => { subMap[s.subscriptionId] = s.name; });
+        }
+
+        const normalized = clarify.map(s => ({
+            ...s,
+            _type: 'clarify',
+            _title: (s.draft && s.draft.title) || 'Untitled',
+            _source: s.sourceType === 'Hunter' ? 'Hunter' : 'Idea'
+        })).concat(ideas.map(s => ({
+            ...s,
+            _type: 'idea',
+            _title: s.originalIdea || 'Untitled',
+            _source: 'Idea'
+        })));
+
+        allSessions = normalized.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        // Populate user filter dropdown for admin
+        if (isAdmin && Object.keys(userMap).length > 0) {
+            const userFilter = document.getElementById('userFilter');
+            userFilter.classList.remove('d-none');
+            const uniqueUsers = [...new Set(allSessions.map(s => s.userId).filter(Boolean))];
+            uniqueUsers.forEach(uid => {
+                const opt = document.createElement('option');
+                opt.value = uid;
+                opt.textContent = userMap[uid] || uid;
+                userFilter.appendChild(opt);
+            });
+        }
+
+        // Show claim button if admin and there are orphan sessions
+        if (isAdmin) {
+            const orphans = allSessions.filter(s => !s.userId);
+            if (orphans.length > 0) document.getElementById('btnClaimOrphans').classList.remove('d-none');
+
+            // Show screenshot capture button if admin and any deployed sessions exist
+            const deployed = allSessions.filter(s => s.deployedUrl);
+            if (deployed.length > 0) document.getElementById('btnCaptureScreenshots').classList.remove('d-none');
+        }
+
+        renderFiltered();
+    } catch (e) {
+        document.getElementById('projectsList').innerHTML =
+            `<div class="col-12"><div class="alert alert-danger">Failed to load: ${esc(e.message)}</div></div>`;
+    }
+}
+
+function matchesFilter(s) {
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'generating') return ['Generating', 'ClarificationComplete', 'Deploying', 'Implementing', 'ReadyToGenerate', 'PromptGenerated', 'Improving'].includes(s.status);
+    if (activeFilter === 'failed') return ['Failed', 'DeployFailed'].includes(s.status);
+    if (activeFilter === 'AwaitingClarification') return ['AwaitingClarification', 'Clarifying', 'AwaitingApproval'].includes(s.status);
+    return s.status === activeFilter;
+}
+
+function filterProjects() { renderFiltered(); }
+
+function setFilter(status, btn) {
+    activeFilter = status;
+    document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderFiltered();
+}
+
+function renderFiltered() {
+    const q = (document.getElementById('projectSearch').value || '').toLowerCase();
+    const userFilterVal = document.getElementById('userFilter').value;
+    const filtered = allSessions.filter(s => {
+        if (!matchesFilter(s)) return false;
+        if (userFilterVal && s.userId !== userFilterVal) return false;
+        if (q) {
+            const title = (s._title || '').toLowerCase();
+            const url = (s.deployedUrl || '').toLowerCase();
+            return title.includes(q) || url.includes(q) || (s.id || '').includes(q);
+        }
+        return true;
+    });
+    render(filtered);
+}
+
+function render(sessions) {
+    const container = document.getElementById('projectsList');
+    if (!sessions.length) {
+        container.innerHTML = `
+            <div class="col-12 text-center text-muted py-5">
+                <i class="bi bi-folder2-open fs-1 d-block mb-3 opacity-50"></i>
+                ${allSessions.length ? 'No projects match your filter.' : 'No projects yet. <a href="/clarify/idea">Start your first build</a>.'}
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = sessions.map(s => {
+        const info = STATUS_INFO[s.status] || { label: s.status, cls: 'bg-secondary', icon: 'bi-question-circle', color: '#6c757d' };
+        const date = new Date(s.createdAt).toLocaleDateString();
+        const title = esc(s._title);
+        const source = s._source === 'Hunter'
+            ? '<i class="bi bi-crosshair me-1"></i>Hunter'
+            : '<i class="bi bi-lightbulb me-1"></i>Idea';
+        const userName = s.userId && userMap[s.userId] ? esc(userMap[s.userId]) : '';
+        const userHtml = userName
+            ? `<span class="text-muted ms-2 small"><i class="bi bi-person me-1"></i>${userName}</span>`
+            : (isAdmin && !s.userId ? '<span class="text-warning ms-2 small"><i class="bi bi-exclamation-triangle me-1"></i>No owner</span>' : '');
+        const subName = s.azureSubscriptionId && subMap[s.azureSubscriptionId] ? esc(subMap[s.azureSubscriptionId]) : '';
+        const screenshotUrl = `/screenshots/${s.id}.png`;
+        const thumbHtml = `<div class="project-thumb">
+            <img src="${screenshotUrl}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<div class=thumb-placeholder><i class=bi bi-window-stack></i></div>'">
+            <div class="thumb-overlay"></div>
+        </div>`;
+        const urlHtml = s.deployedUrl
+            ? `<div class="mt-2 small text-truncate"><a href="${esc(s.deployedUrl)}" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right me-1"></i>${esc(s.deployedUrl)}</a></div>`
+            : '';
+        const rgHtml = isAdmin && s.azureResourceGroup
+            ? `<div class="mt-1 small text-muted"><i class="bi bi-box me-1"></i><code>${esc(s.azureResourceGroup)}</code></div>`
+            : '';
+        const resHtml = isAdmin && s.deployedResources
+            ? `<div class="mt-1 small text-muted"><i class="bi bi-hdd-stack me-1"></i>${esc(s.deployedResources)}</div>`
+            : '';
+        const subHtml = isAdmin && subName
+            ? `<div class="mt-1 small text-muted"><i class="bi bi-cloud me-1"></i>${subName}</div>`
+            : '';
+        const teardownBtn = isAdmin && s.status === 'Deployed'
+            ? `<button class="btn btn-outline-warning btn-sm btn-teardown" onclick="teardown('${s.id}','${s._type}')"><i class="bi bi-arrow-down-circle me-1"></i>Tear Down</button>`
+            : '';
+        const refreshScreenshotBtn = s.deployedUrl
+            ? `<button class="btn btn-outline-info btn-sm btn-refresh-screenshot" onclick="refreshScreenshot('${s.id}','${esc(s.deployedUrl)}')" title="Refresh screenshot"><i class="bi bi-camera me-1"></i></button>`
+            : '';
+        const openBtn = `<button class="btn btn-link btn-sm text-primary p-0" onclick="openProject('${s.id}','${s._type}')"><i class="bi bi-arrow-right-circle me-1"></i>Open</button>`;
+        return `
+            <div class="col-md-6 col-lg-4 project-card fade-in" id="card-${s.id}" data-status="${s.status}" data-title="${esc(s._title)}" data-type="${s._type}">
+                <div class="card card-hover h-100" style="border-left: 3px solid ${info.color}">
+                    ${thumbHtml}
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="badge ${info.cls}"><i class="bi ${info.icon} me-1"></i>${info.label}</span>
+                            <small class="text-muted">${date}</small>
+                        </div>
+                        <div class="fw-semibold small mb-1">${title}</div>
+                        <div class="small text-muted">${source}${userHtml}</div>
+                        ${urlHtml}
+                        ${rgHtml}
+                        ${resHtml}
+                        ${subHtml}
+                    </div>
+                    <div class="card-footer bg-transparent p-2 d-flex justify-content-between align-items-center">
+                        ${openBtn}
+                        <div class="d-flex gap-2 align-items-center">
+                            ${refreshScreenshotBtn}
+                            ${teardownBtn}
+                            <button class="btn btn-link btn-sm text-danger p-0" onclick="deleteProject('${s.id}','${s._type}','${s.status}')">
+                                <i class="bi bi-trash me-1"></i>Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+    }).join('');
+}
+
+function openProject(id, type) {
+    if (type === 'idea') {
+        sessionStorage.setItem('idea_active_session', id);
+        location.href = '/clarify/idea';
+    } else {
+        sessionStorage.setItem('clarify_active_session', id);
+        sessionStorage.setItem('clarify_back_to', 'projects');
+        location.href = '/clarify';
+    }
+}
+
+async function teardown(id, type) {
+    if (!confirm('Tear down this deployment? Solution files will remain.')) return;
+    const btn = document.querySelector(`#card-${id} .btn-teardown`);
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Tearing down...'; }
+    const apiBase = type === 'idea' ? '/api/idea' : '/api/clarify';
+    try {
+        const res = await fetch(`${apiBase}/${id}/teardown`, { method: 'POST', keepalive: true });
+        if (!res.ok) { showToast('Teardown failed', 'danger'); return; }
+        showToast('Torn down successfully', 'success');
+        loadProjects();
+    } catch (e) { showToast('Error: ' + e.message, 'danger'); }
+    finally { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-arrow-down-circle me-1"></i>Tear Down'; } }
+}
+
+async function deleteProject(id, type, status) {
+    const isDeployed = status === 'Deployed';
+    const msg = isDeployed
+        ? 'This project is deployed. It will be torn down from Azure and then deleted locally. Continue?'
+        : 'Delete this project? This cannot be undone.';
+    if (!confirm(msg)) return;
+    const card = document.getElementById('card-' + id);
+    const delBtn = card?.querySelector('.text-danger');
+    if (delBtn) { delBtn.disabled = true; delBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Deleting...'; }
+    const apiBase = type === 'idea' ? '/api/idea' : '/api/clarify';
+    try {
+        const res = await fetch(`${apiBase}/${id}`, { method: 'DELETE', keepalive: true });
+        if (!res.ok) { showToast('Delete failed', 'danger'); if (delBtn) { delBtn.disabled = false; delBtn.innerHTML = '<i class="bi bi-trash me-1"></i>Delete'; } return; }
+        showToast('Deleted', 'success');
+        card?.remove();
+        if (!document.querySelector('#projectsList .card')) loadProjects();
+    } catch (e) { showToast('Error: ' + e.message, 'danger'); if (delBtn) { delBtn.disabled = false; delBtn.innerHTML = '<i class="bi bi-trash me-1"></i>Delete'; } }
+}
+
+async function claimOrphans() {
+    const btn = document.getElementById('btnClaimOrphans');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Claiming...';
+    try {
+        const res = await fetch('/projects/claim-orphans', { method: 'POST' });
+        const data = await res.json();
+        showToast(`Claimed ${data.claimed} projects`, 'success');
+        btn.classList.add('d-none');
+        loadProjects();
+    } catch (e) { showToast('Error: ' + e.message, 'danger'); }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-person-plus me-1"></i>Claim ownerless projects';
+}
+
+async function captureScreenshots() {
+    const btn = document.getElementById('btnCaptureScreenshots');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Capturing... (may take a few minutes)';
+    try {
+        const res = await fetch('/api/screenshot/capture-projects', {
+            method: 'POST'
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            showToast(data.error || 'Screenshot capture failed', 'danger');
+        } else {
+            showToast(data.message, data.captured > 0 ? 'success' : 'info');
+            if (data.captured > 0) loadProjects();
+        }
+    } catch (e) { showToast('Error: ' + e.message, 'danger'); }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-camera me-1"></i>Capture screenshots';
+}
+
+async function refreshScreenshot(sessionId, url) {
+    const card = document.getElementById('card-' + sessionId);
+    const btn = card?.querySelector('.btn-refresh-screenshot');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>'; }
+    try {
+        const res = await fetch('/api/screenshot/capture', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url, name: sessionId })
+        });
+        if (!res.ok) { showToast('Screenshot capture failed', 'danger'); return; }
+        // Update the card's thumbnail with cache-busted URL
+        const img = card?.querySelector('.project-thumb img');
+        if (img) img.src = `/screenshots/${sessionId}.png?t=${Date.now()}`;
+        showToast('Screenshot updated', 'success');
+    } catch (e) { showToast('Error: ' + e.message, 'danger'); }
+    finally { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-camera me-1"></i>'; } }
+}
+
+loadProjects();
+</script>

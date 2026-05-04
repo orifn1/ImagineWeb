@@ -1,0 +1,442 @@
+<div class="page-header">
+    <h1>Dashboard</h1>
+    <p>Opportunity Discovery Platform &mdash; overview and pipeline controls</p>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-md fade-in stagger-1">
+        <div class="card stat-card stat-card-green glow-card">
+            <div class="stat-icon"><i class="bi bi-activity"></i></div>
+            <div id="statusBadge"><span class="badge bg-secondary">Loading...</span></div>
+            <div class="stat-label">Pipeline</div>
+            <div class="small text-muted mt-1" id="currentActivity"></div>
+            <i class="bi bi-info-circle stat-info-icon" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Hunter pipeline status: Running, Idle, or Stopped. Controls the autonomous search → scrape → analyze cycle."></i>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md fade-in stagger-2">
+        <div class="card stat-card stat-card-blue glow-card">
+            <div class="stat-icon"><i class="bi bi-file-earmark-text"></i></div>
+            <div class="stat-value" id="statPages">0</div>
+            <div class="stat-label">Discovered</div>
+            <i class="bi bi-info-circle stat-info-icon" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Total pages found by search engines and link-following. Includes all URLs queued or already processed."></i>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md fade-in stagger-3">
+        <div class="card stat-card stat-card-purple glow-card">
+            <div class="stat-icon"><i class="bi bi-cpu"></i></div>
+            <div class="stat-value" id="statAnalyzed">0</div>
+            <div class="stat-label">Analyzed</div>
+            <i class="bi bi-info-circle stat-info-icon" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Pages that completed Phase 1 AI analysis. Phase 2 (deep build plan) only runs when ProfitScore > Phase2Threshold (default 7, i.e. score ≥ 8) to save model resources."></i>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md fade-in stagger-4">
+        <div class="card stat-card stat-card-amber glow-card">
+            <div class="stat-icon"><i class="bi bi-star"></i></div>
+            <div class="stat-value" id="statHighValue">0</div>
+            <div class="stat-label">High Value</div>
+            <i class="bi bi-info-circle stat-info-icon" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Pages with ProfitScore ≥ 8 of 10 — strong commercial signal AND a buildable concept. These are the best candidates for code generation and deployment."></i>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md fade-in stagger-5">
+        <div class="card stat-card stat-card-teal glow-card">
+            <div class="stat-icon"><i class="bi bi-clock-history"></i></div>
+            <div class="stat-value" id="statUptime">00:00:00</div>
+            <div class="stat-label">Uptime</div>
+            <i class="bi bi-info-circle stat-info-icon" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Time since the application started. Resets on each restart."></i>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-8 fade-in">
+        <div class="card controls-card">
+            <div class="card-body">
+                <h6 class="fw-semibold mb-3"><i class="bi bi-gear-wide-connected me-2" style="color:var(--at-accent)"></i>Pipeline Controls</h6>
+                <div class="d-flex gap-2 flex-wrap mb-3">
+                    <button class="btn btn-success" id="btnStart"
+                        data-bs-toggle="tooltip" title="Start the Hunter pipeline: search, scrape, and analyze pages for opportunities">
+                        <i class="bi bi-play-fill me-1"></i>Start Research
+                    </button>
+                    <button class="btn btn-info text-white" id="btnAnalyzeOnly"
+                        data-bs-toggle="tooltip" title="Analyze only: skip search and scraping, process all previously scraped but unanalyzed pages">
+                        <i class="bi bi-cpu me-1"></i>Analyze Only
+                    </button>
+                    <button class="btn btn-warning" id="btnGraceful" disabled
+                        data-bs-toggle="tooltip" title="Wait for current analysis to finish, then stop the pipeline gracefully">
+                        <i class="bi bi-pause-fill me-1"></i>Graceful Stop
+                    </button>
+                    <button class="btn btn-danger" id="btnImmediate" disabled
+                        data-bs-toggle="tooltip" title="Abort all workers immediately and save progress so far">
+                        <i class="bi bi-stop-fill me-1"></i>Stop Immediately
+                    </button>
+                    <button class="btn btn-outline-danger ms-auto" id="btnReset"
+                        data-bs-toggle="tooltip" title="Permanently delete all discovered pages, topics, and URL history">
+                        <i class="bi bi-trash me-1"></i>Reset
+                    </button>
+                </div>
+
+                <!-- Analysis Model Selection -->
+                <div class="mt-3 pt-3 border-top">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="bi bi-cpu me-2 text-primary"></i>
+                        <strong class="small">Analysis Models</strong>
+                        <i class="bi bi-info-circle ms-2 small text-muted" data-bs-toggle="tooltip" title="Choose which AI model handles Phase 1 (quick scan) and Phase 2 (deep analysis). Changes apply immediately to the next analysis run."></i>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted mb-1">Phase 1 — Quick Scan</label>
+                            <div class="row g-1">
+                                <div class="col-8">
+                                    <select id="dashPhase1Model" class="form-select form-select-sm" title="Model for Phase 1">
+                                        <option value="">Loading models...</option>
+                                    </select>
+                                </div>
+                                <div class="col-4">
+                                    <select id="dashPhase1Reasoning" class="form-select form-select-sm d-none" title="Reasoning effort">
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted mb-1">Phase 2 — Deep Analysis</label>
+                            <div class="row g-1">
+                                <div class="col-8">
+                                    <select id="dashPhase2Model" class="form-select form-select-sm" title="Model for Phase 2">
+                                        <option value="">Loading models...</option>
+                                    </select>
+                                </div>
+                                <div class="col-4">
+                                    <select id="dashPhase2Reasoning" class="form-select form-select-sm d-none" title="Reasoning effort">
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-text small">Model choices are saved instantly and apply to the next analysis run.</div>
+                </div>
+
+                <div class="small text-muted mt-3">
+                    <span class="fw-semibold">Queue Depths</span>
+                    <div class="row g-2 mt-1">
+                        <div class="col-4">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span data-bs-toggle="tooltip" title="Search queue: pending search topics waiting for a SearXNG query. Drained by SearchWorkerCount workers." style="cursor:help">Search <i class="bi bi-info-circle small text-muted"></i></span>
+                                <span id="qSearch">0</span>
+                            </div>
+                            <div class="queue-bar"><div class="queue-bar-fill" id="qSearchBar" style="width:0%"></div></div>
+                        </div>
+                        <div class="col-4">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span data-bs-toggle="tooltip" title="Scrape queue: discovered URLs waiting to be fetched and parsed. Drained by MaxScraperThreads workers." style="cursor:help">Scrape <i class="bi bi-info-circle small text-muted"></i></span>
+                                <span id="qScrape">0</span>
+                            </div>
+                            <div class="queue-bar"><div class="queue-bar-fill" id="qScrapeBar" style="width:0%"></div></div>
+                        </div>
+                        <div class="col-4">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span data-bs-toggle="tooltip" title="Analysis queue: scraped pages waiting for AI analysis (Phase 1, then Phase 2 if best score ≥ 8). Bounded by AnalysisQueueCapacity (default 50)." style="cursor:help">Analysis <i class="bi bi-info-circle small text-muted"></i></span>
+                                <span id="qAnalysis">0</span>
+                            </div>
+                            <div class="queue-bar"><div class="queue-bar-fill" id="qAnalysisBar" style="width:0%"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 fade-in">
+        <div class="card h-100">
+            <div class="card-body d-flex flex-column">
+                <h6 class="fw-semibold mb-3 d-flex align-items-center">
+                    <i class="bi bi-pie-chart me-2" style="color:var(--at-accent-2)"></i>Score Distribution
+                    <i class="bi bi-info-circle ms-2 small text-muted" style="cursor:help" data-bs-toggle="tooltip" data-bs-placement="top" title="Breakdown of analyzed pages by their best score (max of InterestingnessScore, ProfitScore): High (8-10) are distinctive, buildable ideas; Medium (5-7) have potential but need refinement; Low (1-4) are generic or saturated. Based on the latest 500 findings."></i>
+                </h6>
+                <div class="flex-grow-1 d-flex align-items-center justify-content-center" style="min-height:160px">
+                    <canvas id="scoreChart" style="max-height:180px"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h6 class="fw-semibold mb-3"><i class="bi bi-grid me-2" style="color:var(--at-accent)"></i>Quick Actions</h6>
+<div class="row g-3">
+    <div class="col-sm-6 col-lg-4 fade-in stagger-1">
+        <a href="/api/hunter/report" class="card quick-link glow-card h-100 text-decoration-none p-3">
+            <div class="d-flex align-items-center mb-2">
+                <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center" class="me-2">
+                    <i class="bi bi-bar-chart text-white"></i>
+                </div>
+                <h6 class="mb-0">Findings Report</h6>
+            </div>
+            <small class="text-muted">Analyzed opportunities with scores, action plans, and controls</small>
+        </a>
+    </div>
+    <div class="col-sm-6 col-lg-4 fade-in stagger-2">
+        <a href="/api/hunter/topics" class="card quick-link glow-card h-100 text-decoration-none p-3">
+            <div class="d-flex align-items-center mb-2">
+                <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#06b6d4,#22d3ee);display:flex;align-items:center;justify-content:center" class="me-2">
+                    <i class="bi bi-compass text-white"></i>
+                </div>
+                <h6 class="mb-0">Search Topics</h6>
+            </div>
+            <small class="text-muted">View and manage search topics for the discovery engine</small>
+        </a>
+    </div>
+    <div class="col-sm-6 col-lg-4 fade-in stagger-3">
+        <a href="/clarify/idea" class="card quick-link glow-card h-100 text-decoration-none p-3">
+            <div class="d-flex align-items-center mb-2">
+                <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#f59e0b,#fbbf24);display:flex;align-items:center;justify-content:center" class="me-2">
+                    <i class="bi bi-lightbulb text-white"></i>
+                </div>
+                <h6 class="mb-0">Build from Idea</h6>
+            </div>
+            <small class="text-muted">Describe your app idea, refine with AI, then build &amp; deploy</small>
+        </a>
+    </div>
+    <div class="col-sm-6 col-lg-4 fade-in stagger-4">
+        <a href="/clarify/hunter" class="card quick-link glow-card h-100 text-decoration-none p-3">
+            <div class="d-flex align-items-center mb-2">
+                <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#ef4444,#f87171);display:flex;align-items:center;justify-content:center" class="me-2">
+                    <i class="bi bi-crosshair text-white"></i>
+                </div>
+                <h6 class="mb-0">Build from Hunter</h6>
+            </div>
+            <small class="text-muted">Pick a discovered opportunity and build an app from its analysis</small>
+        </a>
+    </div>
+    <div class="col-sm-6 col-lg-4 fade-in stagger-5">
+        <a href="/projects" class="card quick-link glow-card h-100 text-decoration-none p-3">
+            <div class="d-flex align-items-center mb-2">
+                <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#10b981,#34d399);display:flex;align-items:center;justify-content:center" class="me-2">
+                    <i class="bi bi-collection text-white"></i>
+                </div>
+                <h6 class="mb-0">Projects</h6>
+            </div>
+            <small class="text-muted">Manage generated projects, deployments, and site configurations</small>
+        </a>
+    </div>
+    <div class="col-sm-6 col-lg-4 fade-in stagger-6">
+        <a href="/settings" class="card quick-link glow-card h-100 text-decoration-none p-3">
+            <div class="d-flex align-items-center mb-2">
+                <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#818cf8);display:flex;align-items:center;justify-content:center" class="me-2">
+                    <i class="bi bi-sliders text-white"></i>
+                </div>
+                <h6 class="mb-0">Settings</h6>
+            </div>
+            <small class="text-muted">AI providers, pipeline thresholds, credentials &amp; deployment config</small>
+        </a>
+    </div>
+</div>
+
+<script>
+const btnStart = document.getElementById('btnStart');
+const btnAnalyzeOnly = document.getElementById('btnAnalyzeOnly');
+const btnGraceful = document.getElementById('btnGraceful');
+const btnImmediate = document.getElementById('btnImmediate');
+const btnReset = document.getElementById('btnReset');
+
+(function initScoreChart() {
+    var ctx = document.getElementById('scoreChart');
+    if (!ctx || typeof Chart === 'undefined') return;
+    window._scoreChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['High (8-10)', 'Medium (5-7)', 'Low (1-4)'],
+            datasets: [{
+                data: [0, 0, 0],
+                backgroundColor: ['rgba(16,185,129,0.8)', 'rgba(245,158,11,0.8)', 'rgba(239,68,68,0.5)'],
+                borderWidth: 0,
+                borderRadius: 4,
+                spacing: 2
+            }]
+        },
+        options: {
+            cutout: '65%',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12, font: { size: 11 }, usePointStyle: true, pointStyle: 'rectRounded' } }
+            }
+        }
+    });
+    fetch('/api/hunter/findings?minScore=1&limit=500').then(r => r.json()).then(pages => {
+        var high = 0, mid = 0, low = 0;
+        pages.forEach(function(p) { var best = Math.max(p.profitScore||0, p.interestingnessScore||0); if (best >= 8) high++; else if (best >= 5) mid++; else low++; });
+        window._scoreChart.data.datasets[0].data = [high, mid, low];
+        window._scoreChart.update();
+    }).catch(function(){});
+})();
+
+async function sendCommand(url, btn) {
+    btn.disabled = true;
+    try {
+        const r = await fetch(url, { method: 'POST' });
+        const data = await r.json().catch(() => ({}));
+        if (r.ok) { showToast(data.message || 'Done', 'success'); }
+        else { showToast(data.message || 'Request failed', 'danger'); }
+    } catch(e) { showToast('Network error', 'danger'); }
+    setTimeout(() => location.reload(), 1500);
+}
+
+btnStart.addEventListener('click', () => sendCommand('/api/hunter/start', btnStart));
+btnAnalyzeOnly.addEventListener('click', () => sendCommand('/api/hunter/start-analysis', btnAnalyzeOnly));
+btnGraceful.addEventListener('click', () => sendCommand('/api/hunter/stop?mode=graceful', btnGraceful));
+btnImmediate.addEventListener('click', () => {
+    if (confirm('Abort all operations immediately?')) sendCommand('/api/hunter/stop?mode=immediate', btnImmediate);
+});
+btnReset.addEventListener('click', () => {
+    if (confirm('Delete ALL pages, topics and seen URLs from the database? This cannot be undone.'))
+        sendCommand('/api/hunter/reset', btnReset);
+});
+
+function formatUptime(uptimeStr) {
+    if (!uptimeStr) return '00:00:00';
+    var parts = uptimeStr.split(':');
+    if (parts.length >= 3) return parts[0].padStart(2,'0') + ':' + parts[1].padStart(2,'0') + ':' + parts[2].split('.')[0].padStart(2,'0');
+    return uptimeStr;
+}
+
+function updateStatus(s) {
+    var badge = s.isRunning
+        ? '<span class="badge bg-success"><i class="bi bi-circle-fill me-1" style="font-size:0.5rem"></i>Running</span>'
+        : s.currentActivity === 'Idle'
+            ? '<span class="badge bg-secondary">Idle</span>'
+            : '<span class="badge bg-danger">Stopped</span>';
+    document.getElementById('statusBadge').innerHTML = badge;
+    document.getElementById('currentActivity').textContent = s.currentActivity || '';
+    document.getElementById('statUptime').textContent = formatUptime(s.uptime);
+
+    btnStart.disabled = s.isRunning;
+    btnAnalyzeOnly.disabled = s.isRunning;
+    btnGraceful.disabled = !s.isRunning;
+    btnImmediate.disabled = !s.isRunning;
+    btnReset.disabled = s.isRunning;
+
+    var maxQ = 200;
+    var sd = s.searchQueueDepth || 0, sc = s.scrapeQueueDepth || 0, an = s.analysisQueueDepth || 0;
+    document.getElementById('qSearch').textContent = sd;
+    document.getElementById('qScrape').textContent = sc;
+    document.getElementById('qAnalysis').textContent = an;
+    document.getElementById('qSearchBar').style.width = Math.min(sd/maxQ*100, 100) + '%';
+    document.getElementById('qScrapeBar').style.width = Math.min(sc/maxQ*100, 100) + '%';
+    document.getElementById('qAnalysisBar').style.width = Math.min(an/50*100, 100) + '%';
+}
+
+function updateCounts(c) {
+    animateCounter(document.getElementById('statPages'), c.totalPages);
+    animateCounter(document.getElementById('statAnalyzed'), c.analyzedPages);
+    animateCounter(document.getElementById('statHighValue'), c.highValueCount);
+}
+
+function pollData() {
+    fetch('/api/hunter/status').then(r => r.json()).then(updateStatus).catch(() => {});
+    fetch('/api/hunter/counts').then(r => r.json()).then(updateCounts).catch(() => {});
+}
+
+pollData();
+setInterval(pollData, 5000);
+
+// ── Analysis Model Selectors ──
+(async function initAnalysisModels() {
+    try {
+        const [configRes, modelsRes] = await Promise.all([
+            fetch('/api/settings/analysis-config').then(r => r.json()),
+            fetch('/api/clarify/models').then(r => r.json())
+        ]);
+
+        const models = modelsRes.models || [];
+        const p1Model = document.getElementById('dashPhase1Model');
+        const p2Model = document.getElementById('dashPhase2Model');
+        const p1Reasoning = document.getElementById('dashPhase1Reasoning');
+        const p2Reasoning = document.getElementById('dashPhase2Reasoning');
+
+        function esc(text) {
+            var el = document.createElement('span');
+            el.textContent = text || '';
+            return el.innerHTML;
+        }
+
+        function modelValue(m) {
+            if (m.provider === 'copilot') return m.id;
+            return m.provider + ':' + m.id;
+        }
+
+        function buildModelOptions(selectedValue) {
+            var copilotModels = models.filter(m => m.provider === 'copilot');
+            var ollamaModels = models.filter(m => m.provider === 'ollama');
+            var openaiModels = models.filter(m => m.provider === 'openai');
+            var anthropicModels = models.filter(m => m.provider === 'anthropic');
+
+            var opts = '<option value="">(use default from Settings)</option>';
+            if (copilotModels.length > 0) {
+                opts += '<optgroup label="Copilot SDK">';
+                opts += copilotModels.map(m => '<option value="' + esc(modelValue(m)) + '"' + (modelValue(m) === selectedValue ? ' selected' : '') + '>' + esc(m.name || m.id) + '</option>').join('');
+                opts += '</optgroup>';
+            }
+            if (openaiModels.length > 0) {
+                opts += '<optgroup label="OpenAI">';
+                opts += openaiModels.map(m => '<option value="' + esc(modelValue(m)) + '"' + (modelValue(m) === selectedValue ? ' selected' : '') + '>' + esc(m.name || m.id) + '</option>').join('');
+                opts += '</optgroup>';
+            }
+            if (anthropicModels.length > 0) {
+                opts += '<optgroup label="Anthropic">';
+                opts += anthropicModels.map(m => '<option value="' + esc(modelValue(m)) + '"' + (modelValue(m) === selectedValue ? ' selected' : '') + '>' + esc(m.name || m.id) + '</option>').join('');
+                opts += '</optgroup>';
+            }
+            if (ollamaModels.length > 0) {
+                opts += '<optgroup label="Ollama (local)">';
+                opts += ollamaModels.map(m => '<option value="' + esc(modelValue(m)) + '"' + (modelValue(m) === selectedValue ? ' selected' : '') + '>' + esc(m.name || m.id) + '</option>').join('');
+                opts += '</optgroup>';
+            }
+            return opts;
+        }
+
+        function updateReasoningForModel(selectEl, reasoningEl, savedReasoning) {
+            var val = selectEl.value;
+            var model = models.find(m => modelValue(m) === val);
+            var levels = (model && model.reasoningLevels && model.reasoningLevels.length > 0) ? model.reasoningLevels : null;
+            if (!levels) {
+                reasoningEl.innerHTML = '';
+                reasoningEl.classList.add('d-none');
+                return;
+            }
+            reasoningEl.classList.remove('d-none');
+            reasoningEl.innerHTML = levels.map(l => '<option value="' + l + '">' + l.charAt(0).toUpperCase() + l.slice(1) + '</option>').join('');
+            if (savedReasoning && levels.includes(savedReasoning)) reasoningEl.value = savedReasoning;
+            else reasoningEl.value = levels.includes('high') ? 'high' : levels[levels.length - 1];
+        }
+
+        p1Model.innerHTML = buildModelOptions(configRes.phase1Model || '');
+        p2Model.innerHTML = buildModelOptions(configRes.phase2Model || '');
+
+        updateReasoningForModel(p1Model, p1Reasoning, configRes.phase1Reasoning || configRes.reasoningEffort || 'medium');
+        updateReasoningForModel(p2Model, p2Reasoning, configRes.phase2Reasoning || configRes.reasoningEffort || 'high');
+
+        p1Model.addEventListener('change', () => { updateReasoningForModel(p1Model, p1Reasoning, null); saveAnalysisConfig(); });
+        p2Model.addEventListener('change', () => { updateReasoningForModel(p2Model, p2Reasoning, null); saveAnalysisConfig(); });
+        p1Reasoning.addEventListener('change', saveAnalysisConfig);
+        p2Reasoning.addEventListener('change', saveAnalysisConfig);
+    } catch(e) { console.warn('Failed to load analysis models', e); }
+})();
+
+async function saveAnalysisConfig() {
+    const p1Model = document.getElementById('dashPhase1Model');
+    const p2Model = document.getElementById('dashPhase2Model');
+    const p1Reasoning = document.getElementById('dashPhase1Reasoning');
+    const p2Reasoning = document.getElementById('dashPhase2Reasoning');
+    const payload = {
+        'Analysis:Phase1Model': p1Model.value,
+        'Analysis:Phase2Model': p2Model.value,
+        'CopilotSdkAnalysis:ReasoningEffort': p1Reasoning.value || 'medium',
+        'Analysis:Phase2Reasoning': p2Reasoning.value || 'high'
+    };
+    try {
+        await fetch('/api/settings/analysis-config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+    } catch(e) { /* silent */ }
+}
+</script>

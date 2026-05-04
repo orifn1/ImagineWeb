@@ -1,0 +1,1774 @@
+<div class="page-header">
+    <h1><i class="bi bi-lightbulb me-2"></i>Create Idea</h1>
+    <p>Describe your app idea, refine it with AI, then build &amp; deploy</p>
+</div>
+
+<!-- Session List (previous ideas) -->
+<div id="sessionList" class="mb-4"></div>
+
+<!-- Start Form -->
+<div id="startSection">
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5><i class="bi bi-stars me-2 text-warning"></i>What do you want to build?</h5>
+            <p class="text-muted small mb-3">Describe your app idea. Be as detailed or vague as you like — AI will ask follow-up questions if needed.</p>
+            <textarea id="ideaInput" class="form-control mb-3" rows="4" placeholder="e.g. I want to build a dashboard that tracks cryptocurrency prices and alerts me when a coin drops more than 10%..."></textarea>
+
+            <!-- Prompt Writing Guide -->
+            <details class="mb-3" id="promptGuide">
+                <summary class="btn btn-outline-info btn-sm" style="cursor:pointer; list-style:none; display:inline-flex; align-items:center; gap:0.4rem;">
+                    <i class="bi bi-book"></i>How to write a great prompt
+                </summary>
+                <div class="card mt-2 border-info">
+                    <div class="card-body p-3">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="p-2 rounded" style="background: rgba(13,110,253,0.06); border-left: 3px solid #0d6efd;">
+                                    <div class="fw-bold small mb-1" style="color:#0d6efd;"><i class="bi bi-list-check me-1"></i>1. WHAT — List key sections</div>
+                                    <div class="small text-muted">Name the pages and features your site needs.</div>
+                                    <div class="mt-1 small"><span class="text-danger">✗</span> <em>"Make a website"</em></div>
+                                    <div class="small"><span class="text-success">✓</span> <em>"A portfolio site with Home, Projects, About, and Contact pages"</em></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-2 rounded" style="background: rgba(111,66,193,0.06); border-left: 3px solid #6f42c1;">
+                                    <div class="fw-bold small mb-1" style="color:#6f42c1;"><i class="bi bi-palette me-1"></i>2. FORMAT — Describe the result</div>
+                                    <div class="small text-muted">Specify layout style, framework, or tech preferences.</div>
+                                    <div class="mt-1 small"><span class="text-danger">✗</span> <em>"Make it nice"</em></div>
+                                    <div class="small"><span class="text-success">✓</span> <em>"Single-page app, dark theme, card-based layout"</em></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-2 rounded" style="background: rgba(25,135,84,0.06); border-left: 3px solid #198754;">
+                                    <div class="fw-bold small mb-1" style="color:#198754;"><i class="bi bi-people me-1"></i>3. CONTEXT — Who visits your site?</div>
+                                    <div class="small text-muted">Help the AI understand your audience and purpose.</div>
+                                    <div class="mt-1 small"><span class="text-danger">✗</span> <em>"A business site"</em></div>
+                                    <div class="small"><span class="text-success">✓</span> <em>"A SaaS landing page targeting small business owners"</em></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-2 rounded" style="background: rgba(255,193,7,0.08); border-left: 3px solid #ffc107;">
+                                    <div class="fw-bold small mb-1" style="color:#cc9a06;"><i class="bi bi-brush me-1"></i>4. VISUALS — Describe the look</div>
+                                    <div class="small text-muted">Mention colors, mood, images, animations.</div>
+                                    <div class="mt-1 small"><span class="text-danger">✗</span> <em>"Good design"</em></div>
+                                    <div class="small"><span class="text-success">✓</span> <em>"Minimalist, white + teal accent, large hero image, subtle scroll animations"</em></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-2 rounded" style="background: rgba(220,53,69,0.06); border-left: 3px solid #dc3545;">
+                                    <div class="fw-bold small mb-1" style="color:#dc3545;"><i class="bi bi-link-45deg me-1"></i>5. EXAMPLES — Point to references</div>
+                                    <div class="small text-muted">Share links or names of sites you like for inspiration.</div>
+                                    <div class="mt-1 small"><span class="text-danger">✗</span> <em>"Something modern"</em></div>
+                                    <div class="small"><span class="text-success">✓</span> <em>"Similar to stripe.com — clean layout with gradient hero"</em></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-2 rounded" style="background: rgba(108,117,125,0.06); border-left: 3px solid #6c757d;">
+                                    <div class="fw-bold small mb-1" style="color:#6c757d;"><i class="bi bi-slash-circle me-1"></i>6. LIMITS — What to avoid</div>
+                                    <div class="small text-muted">Explicitly exclude things you don't want.</div>
+                                    <div class="mt-1 small"><span class="text-danger">✗</span> <em>(nothing)</em></div>
+                                    <div class="small"><span class="text-success">✓</span> <em>"No stock photos, no carousels, no pop-ups"</em></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-2 small text-muted text-center">
+                            <i class="bi bi-info-circle me-1"></i>You don't need all 6 — even 2-3 points dramatically improve results.
+                        </div>
+                    </div>
+                </div>
+            </details>
+
+            <button id="btnStart" class="btn btn-primary" onclick="startSession()">
+                <i class="bi bi-send me-1"></i>Start Conversation
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Chat Section -->
+<div id="chatSection" class="d-none">
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-chat-dots me-1"></i>AI Conversation</span>
+            <span id="statusBadge" class="badge bg-info">Clarifying</span>
+        </div>
+        <div class="card-body">
+            <div id="chatMessages" style="max-height:50vh; overflow-y:auto; margin-bottom:1rem;"></div>
+
+            <div id="replySection">
+                <div class="input-group">
+                    <input type="text" id="replyInput" class="form-control" placeholder="Your answer..." onkeydown="if(event.key==='Enter')sendReply()"/>
+                    <button class="btn btn-outline-primary" onclick="sendReply()"><i class="bi bi-send"></i></button>
+                </div>
+            </div>
+
+            <div id="roundCounter" class="mt-2 small text-muted d-none">
+                <i class="bi bi-info-circle me-1"></i>Clarification round <strong id="roundNum">1</strong> of 3
+            </div>
+
+            <div id="readyBanner" class="d-none mt-3">
+                <div class="ready-card">
+                    <div class="ready-card-icon">
+                        <i class="bi bi-check-circle-fill"></i>
+                    </div>
+                    <h5 class="mb-1">Your App Is Ready to Be Built!</h5>
+                    <p id="readySummary" class="text-muted small mb-3"></p>
+                    <div class="what-next mb-3">
+                        <div class="small fw-semibold mb-2">Here's what happens next:</div>
+                        <div class="next-steps">
+                            <span class="next-step"><i class="bi bi-1-circle-fill text-primary me-1"></i>AI creates a detailed build prompt</span>
+                            <i class="bi bi-arrow-right text-muted"></i>
+                            <span class="next-step"><i class="bi bi-2-circle-fill text-primary me-1"></i>VS&nbsp;Code generates the code</span>
+                            <i class="bi bi-arrow-right text-muted"></i>
+                            <span class="next-step"><i class="bi bi-3-circle-fill text-primary me-1"></i>You review &amp; deploy</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-success btn-lg pulse-btn" onclick="startBuilding()">
+                        <i class="bi bi-rocket-takeoff me-2"></i>Start Building
+                    </button>
+                    <div class="mt-2">
+                        <button class="btn btn-link btn-sm text-muted" onclick="generatePrompt()">
+                            <i class="bi bi-eye me-1"></i>I want to review the prompt first
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="maxRoundsBanner" class="d-none mt-3">
+                <div class="ready-card border-warning">
+                    <div class="ready-card-icon text-warning">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </div>
+                    <h5 class="mb-1">Maximum Clarification Rounds Reached</h5>
+                    <p class="text-muted small mb-3">AI will now start building your program automatically...</p>
+                    <div class="progress" style="height:4px">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning" style="width:100%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer d-flex gap-2">
+            <button class="btn btn-outline-success btn-sm" id="btnSkipGenerate" onclick="startBuilding()">
+                <i class="bi bi-skip-forward me-1"></i>Skip &amp; Build Now
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="resetToStart()">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>Start Over
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Generation Pipeline -->
+<div id="generationPipeline" class="d-none mb-4">
+    <div class="card">
+        <div class="card-body">
+            <h5 class="mb-3"><i class="bi bi-gear-wide-connected me-2 text-primary"></i>Building Your Program</h5>
+            <div class="pipeline-steps">
+                <div class="pipeline-step" id="step-prompt">
+                    <div class="step-icon"><i class="bi bi-file-earmark-code"></i></div>
+                    <div class="step-body">
+                        <strong>Creating Build Prompt</strong>
+                        <div class="small text-muted">AI composes detailed instructions for your program</div>
+                    </div>
+                    <span class="step-status"><span class="spinner-border spinner-border-sm"></span></span>
+                </div>
+                <div class="pipeline-step text-muted" id="step-implement">
+                    <div class="step-icon"><i class="bi bi-code-slash"></i></div>
+                    <div class="step-body">
+                        <strong>Implementing Code</strong>
+                        <div class="small">VS Code generates the actual source code</div>
+                    </div>
+                    <span class="step-status"></span>
+                </div>
+                <div class="pipeline-step text-muted" id="step-deploy">
+                    <div class="step-icon"><i class="bi bi-cloud-upload"></i></div>
+                    <div class="step-body">
+                        <strong>Ready to Deploy</strong>
+                        <div class="small">Review and deploy to GitHub Pages or Azure</div>
+                    </div>
+                    <span class="step-status"></span>
+                </div>
+            </div>
+            <div id="pipelineStatus" class="small text-muted text-center mt-3 d-none"></div>
+            <div id="logPanel" class="d-none mt-3">
+                <div class="log-panel-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-terminal me-1"></i>Live Output</span>
+                    <div class="d-flex gap-3 align-items-center">
+                        <button type="button" class="btn btn-link btn-sm p-0 d-flex align-items-center gap-1"
+                                style="color:#9cdcfe;text-decoration:none"
+                                data-bs-toggle="offcanvas" data-bs-target="#usagePanel" aria-controls="usagePanel">
+                            <i class="bi bi-activity" style="font-size:.8rem"></i>
+                            <span style="font-size:.75rem">Requests</span>
+                            <span id="usageBadge" class="badge rounded-pill" style="background:#264f78;color:#9cdcfe;font-size:.6rem;min-width:1.2rem">0</span>
+                        </button>
+                        <button class="btn btn-link btn-sm p-0 text-muted" onclick="document.getElementById('logContent').textContent=''">Clear</button>
+                    </div>
+                </div>
+                <pre id="logContent" class="log-panel-content"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Prompt Section -->
+<div id="promptSection" class="d-none">
+    <div class="card mb-4 border-primary">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-file-text me-1"></i>Build Prompt Generated</span>
+            <span class="badge bg-light text-primary">Step 1 of 3</span>
+        </div>
+        <div class="card-body">
+            <div id="ideaProviderSelector"></div>
+            <div class="implement-cta mb-3">
+                <h5 class="mb-1"><i class="bi bi-lightning-charge-fill text-warning me-2"></i>Prompt is ready — launch implementation!</h5>
+                <p class="text-muted small mb-3">Click the button below to open VS Code and have AI build your entire program automatically.</p>
+                <button class="btn btn-primary btn-lg pulse-btn" onclick="implement('codeChatCli')">
+                    <i class="bi bi-rocket-takeoff me-2"></i>Launch Implementation in VS Code
+                </button>
+            </div>
+            <hr/>
+            <details>
+                <summary class="text-muted small" style="cursor:pointer"><i class="bi bi-eye me-1"></i>View / edit build prompt</summary>
+                <pre id="promptPreview" class="bg-light p-3 rounded small mt-2" style="max-height:30vh; overflow-y:auto; white-space:pre-wrap;"></pre>
+            </details>
+        </div>
+        <div class="card-footer d-flex gap-2 flex-wrap">
+            <button class="btn btn-outline-primary btn-sm" onclick="implement('promptFile')">
+                <i class="bi bi-file-text me-1"></i>Save Prompt Only
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="regeneratePrompt()" title="Uses 1 premium request to rewrite the prompt with AI">
+                <i class="bi bi-arrow-clockwise me-1"></i>Regenerate Prompt with AI
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Deploy Section -->
+<div id="deploySection" class="d-none">
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-cloud-upload me-1"></i>Deploy</span>
+            <span id="deployStatusBadge" class="badge bg-warning">Awaiting Approval</span>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small">Solution is ready. Review the files, then deploy:</p>
+            <div class="mb-3 small">
+                <strong>Solution path:</strong> <code id="solutionPathDisplay"></code>
+            </div>
+
+            <!-- Auto-deploy progress (shown during auto-deploy) -->
+            <div id="autoDeployProgress" class="d-none mb-3">
+                <div class="d-flex align-items-center gap-2 text-muted small">
+                    <span class="spinner-border spinner-border-sm flex-shrink-0"></span>
+                    <span id="autoDeployProgressText">Auto-deploying to GitHub Pages...</span>
+                </div>
+            </div>
+
+            <div id="deployButtons" class="d-flex gap-2 flex-wrap mb-3">
+                <button class="btn btn-success btn-sm" onclick="deployGitHub()">
+                    <i class="bi bi-github me-1"></i>Deploy to GitHub Pages
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="showAzureDeployPlan()">
+                    <i class="bi bi-cloud me-1"></i>Deploy to Azure
+                </button>
+            </div>
+
+            <!-- Azure Deployment Plan Preview -->
+            <div id="deployPlanSection" class="d-none mb-3">
+                <div class="card border-info">
+                    <div class="card-header bg-info bg-opacity-10 d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-clipboard-data me-1"></i>Deployment Plan</span>
+                        <span id="planCostBadge" class="badge bg-success">$0.00/mo</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <!-- Warnings -->
+                        <div id="planWarnings"></div>
+
+                        <!-- Resources Table -->
+                        <table class="table table-sm mb-0 small">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Resource
+                                        <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip"
+                                           title="Azure resources that will be created by this deployment"></i>
+                                    </th>
+                                    <th>SKU
+                                        <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip"
+                                           title="Pricing tier. Free tiers have usage limits but cost nothing"></i>
+                                    </th>
+                                    <th>Cost/mo
+                                        <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip"
+                                           title="Estimated monthly cost in USD from Azure Retail Prices API"></i>
+                                    </th>
+                                    <th>Limitations</th>
+                                </tr>
+                            </thead>
+                            <tbody id="planResourcesBody"></tbody>
+                        </table>
+
+                        <!-- Quota Info -->
+                        <div id="planQuotaSection" class="p-3 border-top">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <strong class="small">Subscription Quota</strong>
+                                <i class="bi bi-info-circle text-muted" data-bs-toggle="tooltip"
+                                   title="Azure limits the number of free resources per subscription. Exceeding this limit will cause deployment failure."></i>
+                            </div>
+                            <div id="planQuotaDetails" class="small"></div>
+                        </div>
+
+                        <!-- Existing Plans (for reuse) -->
+                        <div id="planExistingPlans" class="d-none p-3 border-top">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <strong class="small">Existing Free Plans (can host additional apps)</strong>
+                                <i class="bi bi-info-circle text-muted" data-bs-toggle="tooltip"
+                                   title="Each F1 App Service Plan can host multiple apps. Deploying to an existing plan doesn't consume a new free plan slot."></i>
+                            </div>
+                            <div id="existingPlansList" class="small"></div>
+                        </div>
+                    </div>
+                    <div class="card-footer d-flex gap-2 flex-wrap">
+                        <button class="btn btn-primary btn-sm" id="btnConfirmDeploy" onclick="confirmAzureDeploy()">
+                            <i class="bi bi-cloud-upload me-1"></i>Confirm Deploy
+                        </button>
+                        <button class="btn btn-outline-warning btn-sm" id="btnRegenFree" onclick="regenerateForFreeTier()" style="display:none">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Regenerate for Free Tier
+                            <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip"
+                               title="Re-run code generation with strict free-tier-only instructions. This will replace the current solution."></i>
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="hidePlanSection()">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deployed info -->
+            <div id="deployedInfo" class="d-none">
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle me-1"></i>Deployed!
+                    <a id="deployedLink" href="#" target="_blank" class="ms-2"></a>
+                    <span id="deployedCostInfo" class="ms-2 badge bg-light text-dark"></span>
+                </div>
+                <div id="showcaseOptIn" class="form-check mb-3 d-none">
+                    <input class="form-check-input" type="checkbox" id="showcaseCheckbox" onchange="toggleShowcaseOptIn()">
+                    <label class="form-check-label small" for="showcaseCheckbox">
+                        <i class="bi bi-star me-1 text-warning"></i>Show my site on the ImagineWeb landing page
+                    </label>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-warning btn-sm" onclick="teardown()">
+                        <i class="bi bi-arrow-down-circle me-1"></i>Teardown
+                    </button>
+                </div>
+            </div>
+
+            <!-- Session details (collapsible) -->
+            <div id="sessionDetailsSection" class="mt-3 d-none">
+                <details class="mb-2">
+                    <summary class="text-muted small fw-semibold" style="cursor:pointer">
+                        <i class="bi bi-chat-left-text me-1"></i>Original idea &amp; clarifications
+                    </summary>
+                    <div id="sessionDetailMessages" class="mt-2" style="max-height:30vh;overflow-y:auto"></div>
+                </details>
+                <details class="mb-2">
+                    <summary class="text-muted small fw-semibold" style="cursor:pointer">
+                        <i class="bi bi-activity me-1"></i>Billed Copilot SDK requests
+                    </summary>
+                    <div class="mt-2">
+                        <table class="table table-sm table-hover mb-0" style="font-size:.8rem">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Request Type</th>
+                                    <th>Model</th>
+                                    <th class="text-end">Prompt</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sessionRequestsBody">
+                                <tr><td colspan="4" class="text-center text-muted py-3"><small>No requests recorded</small></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+                <details class="mb-2 admin-only d-none" id="stepTimingDetails">
+                    <summary class="text-muted small fw-semibold" style="cursor:pointer">
+                        <i class="bi bi-stopwatch me-1"></i>Step timings (admin)
+                    </summary>
+                    <div class="mt-2" id="stepTimingContent">
+                        <div class="text-center text-muted small py-2">No timing data</div>
+                    </div>
+                </details>
+            </div>
+        </div>
+        <div class="card-footer d-flex gap-2">
+            <button class="btn btn-outline-danger btn-sm" onclick="deleteSession()">
+                <i class="bi bi-trash me-1"></i>Delete Solution
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="resetToStart()">
+                <i class="bi bi-plus-circle me-1"></i>New Idea
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loading" class="d-none text-center my-4">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="text-muted mt-2" id="loadingText">AI is thinking...</p>
+</div>
+
+<!-- Copilot Usage Side Panel -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="usagePanel" aria-labelledby="usagePanelLabel" style="width:400px;max-width:95vw">
+    <div class="offcanvas-header border-bottom py-2" style="background:var(--bs-tertiary-bg)">
+        <h6 class="offcanvas-title mb-0" id="usagePanelLabel">
+            <i class="bi bi-activity me-2 text-primary"></i>Copilot SDK Requests
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body p-0 d-flex flex-column" style="min-height:0">
+        <div class="px-3 py-2 border-bottom" style="background:var(--bs-tertiary-bg)">
+            <small class="text-muted">SDK calls with cost during code generation</small>
+        </div>
+        <div class="flex-grow-1 overflow-auto">
+            <table class="table table-sm table-hover mb-0" id="usageTable" style="font-size:.8rem">
+                <thead class="sticky-top" style="background:var(--bs-tertiary-bg)">
+                    <tr>
+                        <th class="text-nowrap ps-3" style="width:68px">Time</th>
+                        <th>Request Type</th>
+                        <th class="text-nowrap">Model</th>
+                        <th class="text-end pe-3 text-nowrap" style="width:68px">Prompt</th>
+                    </tr>
+                </thead>
+                <tbody id="usageTableBody">
+                    <tr id="usageEmptyRow">
+                        <td colspan="4" class="text-center text-muted py-5">
+                            <i class="bi bi-activity d-block mb-2" style="font-size:1.5rem;opacity:.3"></i>
+                            <small>No requests yet — start code generation</small>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="border-top px-3 py-2 d-flex justify-content-between align-items-center" style="background:var(--bs-tertiary-bg)">
+            <small class="text-muted" id="usageSummary">0 requests</small>
+            <button class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem" onclick="clearUsagePanel()">
+                <i class="bi bi-trash me-1"></i>Clear
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .msg { border-radius: .75rem; padding: .75rem 1rem; margin-bottom: .75rem; white-space: pre-wrap; word-break: break-word; max-width: 85%; position: relative; }
+    .msg-user { background: var(--at-accent, #0d6efd); color: #fff; margin-left: auto; border-bottom-right-radius: .2rem; }
+    .msg-assistant { background: var(--bs-tertiary-bg, #f1f8e9); margin-right: auto; border-bottom-left-radius: .2rem; }
+    .msg-ready { background: #d4edda; border-left: 4px solid #198754; max-width: 100%; }
+    .msg-avatar { width: 1.75rem; height: 1.75rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; flex-shrink: 0; }
+    .msg-avatar-user { background: var(--at-accent, #0d6efd); color: #fff; }
+    .msg-avatar-ai { background: #6f42c1; color: #fff; }
+    .msg-row { display: flex; gap: .5rem; align-items: flex-end; margin-bottom: .75rem; }
+    .msg-row-user { flex-direction: row-reverse; }
+    .msg-row-ai { flex-direction: row; }
+    .session-item { cursor: pointer; transition: background 0.15s; }
+    .session-item:hover { background: #e9ecef; }
+    .session-card { cursor: pointer; transition: box-shadow 0.2s, transform 0.2s; border: 1px solid #e0e0e0; }
+    .session-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.1); transform: translateY(-2px); }
+    .q-card { background: var(--bs-body-bg, #fff); border: 1px solid var(--at-card-border, #dee2e6); border-radius: var(--at-radius-sm, .5rem); padding: 1rem; margin-bottom: .75rem; }
+    .q-card h6 { font-size: .9rem; margin-bottom: .5rem; }
+    .q-option { display: flex; align-items: center; gap: .5rem; padding: .25rem 0; }
+    .q-option label { cursor: pointer; font-size: .875rem; margin: 0; }
+    .q-custom { margin-top: .5rem; }
+    .q-custom input { font-size: .875rem; }
+    .pipeline-steps { display: flex; flex-direction: column; gap: 0; position: relative; }
+    .pipeline-step { display: flex; align-items: center; gap: .75rem; padding: .75rem; border-radius: var(--at-radius-sm, .5rem); border: 1px solid var(--at-card-border, #dee2e6); position: relative; z-index: 1; }
+    .pipeline-step + .pipeline-step { margin-top: -1px; }
+    .pipeline-steps::before { content: ''; position: absolute; left: 1.75rem; top: 1.5rem; bottom: 1.5rem; width: 2px; background: var(--at-card-border, #dee2e6); z-index: 0; }
+    .pipeline-step.active { border-color: var(--at-accent, #0d6efd); background: var(--at-accent-soft, #e7f1ff); }
+    .pipeline-step.done { border-color: #198754; background: #d1e7dd; }
+    .pipeline-step.done + .pipeline-step.active::after,
+    .pipeline-step.done + .pipeline-step.done::after { content: ''; position: absolute; left: 1.75rem; top: -1rem; width: 2px; height: 1rem; background: #198754; z-index: 0; }
+    .step-icon { font-size: 1.25rem; width: 2rem; text-align: center; position: relative; z-index: 2; background: var(--bs-body-bg, #fff); border-radius: 50%; padding: .15rem 0; }
+    .pipeline-step.active .step-icon { background: var(--at-accent-soft, #e7f1ff); }
+    .pipeline-step.done .step-icon { background: #d1e7dd; }
+    .step-body { flex: 1; }
+    .step-status { width: 1.5rem; text-align: center; }
+    .ready-card { text-align: center; padding: 1.5rem; background: linear-gradient(135deg, #d1e7dd 0%, #e8f5e9 100%); border: 2px solid #198754; border-radius: var(--at-radius, .75rem); }
+    .ready-card.border-warning { background: linear-gradient(135deg, #fff3cd 0%, #fef9e7 100%); border-color: #ffc107; }
+    .ready-card-icon { font-size: 2.5rem; color: #198754; margin-bottom: .5rem; }
+    .ready-card-icon.text-warning { color: #ffc107; }
+    .implement-cta { text-align: center; padding: 1rem; background: var(--at-accent-soft, #f0f7ff); border-radius: var(--at-radius-sm, .5rem); }
+    .what-next { background: rgba(255,255,255,.6); border-radius: var(--at-radius-sm, .5rem); padding: .75rem 1rem; }
+    .next-steps { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; justify-content: center; }
+    .next-step { font-size: .8rem; }
+    @keyframes pulse-glow { 0%,100% { box-shadow: 0 0 0 0 rgba(25,135,84,.4); } 50% { box-shadow: 0 0 0 12px rgba(25,135,84,0); } }
+    .pulse-btn { animation: pulse-glow 2s infinite; }
+    .pulse-btn:hover { animation: none; }
+    .log-panel-header { font-size: .8rem; font-weight: 600; padding: .4rem .75rem; background: #1e1e1e; color: #ccc; border-radius: var(--at-radius-sm, .5rem) var(--at-radius-sm, .5rem) 0 0; }
+    .log-panel-content { background: #1e1e1e; color: #d4d4d4; font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; font-size: .75rem; padding: .75rem; margin: 0; max-height: 30vh; overflow-y: auto; border-radius: 0 0 var(--at-radius-sm, .5rem) var(--at-radius-sm, .5rem); white-space: pre-wrap; word-break: break-word; }
+</style>
+
+<script>
+let sessionId = null;
+const MAX_ROUNDS = 3;
+let ideaReconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
+let ideaDeployPollInterval = null;
+let ideaStatusPollInterval = null;
+
+function startDeployPolling() {
+    stopDeployPolling();
+    ideaDeployPollInterval = setInterval(async () => {
+        try {
+            const res = await fetch(`/api/idea/${sessionId}`);
+            if (!res.ok) return;
+            const session = await res.json();
+            if (session.status === 'Deployed') {
+                stopDeployPolling();
+                document.getElementById('autoDeployProgress').classList.add('d-none');
+                showDeploySection(session);
+                showToast('Deployed!', 'success');
+            } else if (session.status === 'DeployFailed') {
+                stopDeployPolling();
+                document.getElementById('autoDeployProgress').classList.add('d-none');
+                document.getElementById('deployButtons').classList.remove('d-none');
+                showDeploySection(session);
+                showToast('Deploy failed: ' + (session.deployError || 'Unknown error'), 'danger');
+            }
+        } catch { /* ignore */ }
+    }, 3000);
+}
+
+function stopDeployPolling() {
+    if (ideaDeployPollInterval) {
+        clearInterval(ideaDeployPollInterval);
+        ideaDeployPollInterval = null;
+    }
+}
+
+function stopStatusPolling() {
+    if (ideaStatusPollInterval) {
+        clearInterval(ideaStatusPollInterval);
+        ideaStatusPollInterval = null;
+    }
+}
+
+function startStatusPolling() {
+    stopStatusPolling();
+    ideaStatusPollInterval = setInterval(async () => {
+        if (!sessionId) { stopStatusPolling(); return; }
+        try {
+            const res = await fetch(`/api/idea/${sessionId}`);
+            if (!res.ok) return;
+            const session = await res.json();
+            if (session.status === 'AwaitingApproval' || session.status === 'Deployed') {
+                stopStatusPolling();
+                clearIdeaActiveSession();
+                completePipelineStep('step-implement');
+                completePipelineStep('step-deploy');
+                hideAll();
+                showDeploySection(session);
+                showToast('Code generation complete!', 'success');
+            } else if (session.status === 'PromptGenerated') {
+                stopStatusPolling();
+                clearIdeaActiveSession();
+                failPipelineStep('step-implement');
+                setPipelineStatus('');
+                document.getElementById('promptSection').classList.remove('d-none');
+                document.getElementById('generationPipeline').classList.add('d-none');
+                if (session.generatedPrompt) document.getElementById('promptPreview').textContent = session.generatedPrompt;
+                showToast('Code generation failed. You can retry below.', 'warning');
+            } else if (session.status === 'Implementing' && !eventSource) {
+                stopStatusPolling();
+                ideaReconnectAttempts = 0;
+                connectEventStream();
+            }
+        } catch(e) { /* ignore */ }
+    }, 5000);
+}
+
+window.addEventListener('beforeunload', () => {
+    if (eventSource) { eventSource.close(); eventSource = null; }
+    stopStatusPolling();
+});
+
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden || !sessionId || eventSource) return;
+    const pipeline = document.getElementById('generationPipeline');
+    if (pipeline && !pipeline.classList.contains('d-none')) {
+        ideaReconnectAttempts = 0;
+        stopStatusPolling();
+        connectEventStream();
+    }
+});
+
+function saveIdeaActiveSession() {
+    if (sessionId) sessionStorage.setItem('idea_active_session', sessionId);
+}
+function clearIdeaActiveSession() {
+    sessionStorage.removeItem('idea_active_session');
+}
+
+function showLoading(show, text) {
+    document.getElementById('loading').classList.toggle('d-none', !show);
+    if (text) document.getElementById('loadingText').textContent = text;
+}
+
+function hideAll() {
+    ['startSection', 'chatSection', 'promptSection', 'deploySection', 'generationPipeline'].forEach(id =>
+        document.getElementById(id).classList.add('d-none'));
+}
+
+function tryParseJson(text) {
+    try {
+        const trimmed = text.trim();
+        const start = trimmed.indexOf('{');
+        const end = trimmed.lastIndexOf('}');
+        if (start >= 0 && end > start) {
+            return JSON.parse(trimmed.substring(start, end + 1));
+        }
+    } catch(e) {}
+    return null;
+}
+
+function addMessage(role, content) {
+    const container = document.getElementById('chatMessages');
+
+    if (role === 'user') {
+        const row = document.createElement('div');
+        row.className = 'msg-row msg-row-user fade-in';
+        row.innerHTML = `<div class="msg-avatar msg-avatar-user"><i class="bi bi-person-fill"></i></div>`;
+        const bubble = document.createElement('div');
+        bubble.className = 'msg msg-user';
+        bubble.textContent = content;
+        row.appendChild(bubble);
+        container.appendChild(row);
+        row.scrollIntoView({ behavior: 'smooth' });
+        return;
+    }
+
+    const parsed = tryParseJson(content);
+
+    if (parsed && parsed.ready) {
+        const div = document.createElement('div');
+        div.className = 'msg msg-ready fade-in';
+        div.style.maxWidth = '100%';
+        div.innerHTML = '<i class="bi bi-check-circle-fill text-success me-1"></i><strong>Ready!</strong> ' + escapeHtml(parsed.summary || '');
+        container.appendChild(div);
+        div.scrollIntoView({ behavior: 'smooth' });
+        showReadyState(parsed.summary || '');
+        return;
+    }
+
+    if (parsed && parsed.questions && parsed.questions.length > 0) {
+        renderQuestionForm(parsed.questions);
+        return;
+    }
+
+    const row = document.createElement('div');
+    row.className = 'msg-row msg-row-ai fade-in';
+    row.innerHTML = `<div class="msg-avatar msg-avatar-ai"><i class="bi bi-robot"></i></div>`;
+    const bubble = document.createElement('div');
+    bubble.className = 'msg msg-assistant';
+    bubble.textContent = content.replace(/\[READY\]/gi, '').trim();
+    row.appendChild(bubble);
+    container.appendChild(row);
+    row.scrollIntoView({ behavior: 'smooth' });
+}
+
+function renderQuestionForm(questions) {
+    const container = document.getElementById('chatMessages');
+    const wrapper = document.createElement('div');
+    wrapper.className = 'msg msg-assistant';
+    wrapper.innerHTML = '<div class="mb-2"><i class="bi bi-question-circle text-info me-1"></i><strong>AI needs more details:</strong></div>';
+
+    const form = document.createElement('div');
+    form.id = 'questionForm';
+
+    questions.forEach((q, qi) => {
+        const card = document.createElement('div');
+        card.className = 'q-card';
+        card.innerHTML = `<h6>${escapeHtml(q.question)}</h6>`;
+
+        const optionsDiv = document.createElement('div');
+        (q.options || []).forEach((opt, oi) => {
+            const id = `q${qi}_o${oi}`;
+            const optEl = document.createElement('div');
+            optEl.className = 'q-option';
+            optEl.innerHTML = `<input type="checkbox" id="${id}" data-qi="${qi}" data-option="${escapeHtml(opt)}" class="form-check-input q-checkbox"/>` +
+                `<label for="${id}">${escapeHtml(opt)}</label>`;
+            optionsDiv.appendChild(optEl);
+        });
+        card.appendChild(optionsDiv);
+
+        const customDiv = document.createElement('div');
+        customDiv.className = 'q-custom';
+        customDiv.innerHTML = `<input type="text" class="form-control form-control-sm q-custom-input" data-qi="${qi}" placeholder="Or type your own answer..."/>`;
+        card.appendChild(customDiv);
+
+        form.appendChild(card);
+    });
+
+    wrapper.appendChild(form);
+
+    const btnDiv = document.createElement('div');
+    btnDiv.className = 'mt-3 d-flex gap-2';
+    btnDiv.innerHTML = `<button class="btn btn-primary btn-sm" onclick="submitAnswers()"><i class="bi bi-send me-1"></i>Submit Answers</button>`;
+    wrapper.appendChild(btnDiv);
+
+    container.appendChild(wrapper);
+    document.getElementById('replySection').classList.add('d-none');
+
+    wrapper.scrollIntoView({ behavior: 'smooth' });
+}
+
+function collectAnswers() {
+    const form = document.getElementById('questionForm');
+    if (!form) return '';
+
+    const cards = form.querySelectorAll('.q-card');
+    const answers = [];
+
+    cards.forEach((card, qi) => {
+        const question = card.querySelector('h6').textContent;
+        const checked = [];
+        card.querySelectorAll('.q-checkbox:checked').forEach(cb => {
+            checked.push(cb.dataset.option);
+        });
+        const custom = card.querySelector('.q-custom-input').value.trim();
+
+        const parts = [...checked];
+        if (custom) parts.push(custom);
+
+        if (parts.length > 0) {
+            answers.push(`${question}\nAnswer: ${parts.join(', ')}`);
+        } else {
+            answers.push(`${question}\nAnswer: (no answer)`);
+        }
+    });
+
+    return answers.join('\n\n');
+}
+
+async function submitAnswers() {
+    const text = collectAnswers();
+    if (!text || !sessionId) return;
+
+    const form = document.getElementById('questionForm');
+    if (form) {
+        const wrapper = form.closest('.msg');
+        if (wrapper) wrapper.remove();
+    }
+
+    document.getElementById('replySection').classList.remove('d-none');
+    addMessage('user', text);
+    showLoading(true, 'AI is thinking...');
+
+    try {
+        const res = await fetch(`/api/idea/${sessionId}/respond`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: text })
+        });
+        const data = await res.json();
+        addMessage('assistant', data.message.content);
+        updateStatus(data.status, data.clarificationRound);
+    } catch(e) { showToast('Error: ' + e.message, 'danger'); }
+    finally { showLoading(false); }
+}
+
+function showReadyState(summary) {
+    document.getElementById('replySection').classList.add('d-none');
+    document.getElementById('roundCounter').classList.add('d-none');
+    document.getElementById('btnSkipGenerate').classList.add('d-none');
+    const form = document.getElementById('questionForm');
+    if (form) {
+        const wrapper = form.closest('.msg');
+        if (wrapper) wrapper.remove();
+    }
+
+    const banner = document.getElementById('readyBanner');
+    const summaryEl = document.getElementById('readySummary');
+    if (summaryEl && summary) summaryEl.textContent = summary;
+    banner.classList.remove('d-none');
+    setTimeout(() => banner.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+
+    const badge = document.getElementById('statusBadge');
+    badge.textContent = 'Ready to Build';
+    badge.className = 'badge bg-success';
+}
+
+function updateStatus(status, clarificationRound) {
+    const badge = document.getElementById('statusBadge');
+    const map = {
+        'Clarifying': ['Clarifying', 'bg-info'],
+        'ReadyToGenerate': ['Ready to Build', 'bg-success'],
+        'PromptGenerated': ['Prompt Ready', 'bg-primary'],
+        'Implementing': ['Building...', 'bg-warning'],
+        'AwaitingApproval': ['Awaiting Approval', 'bg-secondary'],
+        'Deploying': ['Deploying...', 'bg-warning'],
+        'Deployed': ['Deployed', 'bg-success'],
+        'DeployFailed': ['Deploy Failed', 'bg-danger']
+    };
+    const [text, cls] = map[status] || [status, 'bg-secondary'];
+    badge.textContent = text;
+    badge.className = `badge ${cls}`;
+
+    const round = clarificationRound || 0;
+    if (status === 'Clarifying' && round > 0) {
+        document.getElementById('roundCounter').classList.remove('d-none');
+        document.getElementById('roundNum').textContent = round;
+    }
+
+    if (status === 'ReadyToGenerate') {
+        showReadyState('');
+
+        if (round >= MAX_ROUNDS) {
+            document.getElementById('readyBanner').classList.add('d-none');
+            const maxBanner = document.getElementById('maxRoundsBanner');
+            maxBanner.classList.remove('d-none');
+            maxBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => startBuilding(), 2000);
+        }
+    }
+}
+
+function updateDeployBadge(status) {
+    const badge = document.getElementById('deployStatusBadge');
+    const map = {
+        'AwaitingApproval': ['Awaiting Approval', 'bg-warning'],
+        'Deploying': ['Deploying...', 'bg-info'],
+        'Deployed': ['Deployed', 'bg-success'],
+        'DeployFailed': ['Deploy Failed', 'bg-danger']
+    };
+    const [text, cls] = map[status] || [status, 'bg-secondary'];
+    badge.textContent = text;
+    badge.className = `badge ${cls}`;
+}
+
+async function loadSessions() {
+    try {
+        const res = await fetch('/api/idea');
+        const sessions = await res.json();
+        const container = document.getElementById('sessionList');
+        if (!sessions.length) { container.innerHTML = ''; return; }
+
+        const statusInfo = {
+            'Clarifying':       { label: 'In Progress',    cls: 'bg-info',      icon: 'bi-chat-dots' },
+            'ReadyToGenerate':  { label: 'Ready to Build', cls: 'bg-success',   icon: 'bi-check-circle' },
+            'PromptGenerated':  { label: 'Prompt Ready',   cls: 'bg-primary',   icon: 'bi-file-code' },
+            'Implementing':     { label: 'Building',       cls: 'bg-warning text-dark', icon: 'bi-gear' },
+            'AwaitingApproval': { label: 'Review & Deploy',cls: 'bg-secondary', icon: 'bi-eye' },
+            'Deploying':        { label: 'Deploying',      cls: 'bg-warning text-dark', icon: 'bi-cloud-upload' },
+            'Deployed':         { label: 'Live',           cls: 'bg-success',   icon: 'bi-globe' },
+            'DeployFailed':     { label: 'Deploy Failed',  cls: 'bg-danger',    icon: 'bi-x-circle' },
+            'Failed':           { label: 'Failed',         cls: 'bg-danger',    icon: 'bi-x-circle' }
+        };
+
+        container.innerHTML =
+            '<h6 class="text-muted mb-2"><i class="bi bi-clock-history me-1"></i>Your Ideas</h6>' +
+            '<div class="row g-2 mb-3">' +
+            sessions.map(s => {
+                const info = statusInfo[s.status] || { label: s.status, cls: 'bg-secondary', icon: 'bi-question-circle' };
+                const date = new Date(s.createdAt).toLocaleDateString();
+                const title = escapeHtml(s.originalIdea.substring(0, 60)) + (s.originalIdea.length > 60 ? '...' : '');
+                return `
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card session-card h-100" onclick="resumeSession('${s.id}')">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <span class="badge ${info.cls}"><i class="bi ${info.icon} me-1"></i>${info.label}</span>
+                                    <small class="text-muted">${date}</small>
+                                </div>
+                                <div class="fw-semibold small">${title}</div>
+                            </div>
+                            <div class="card-footer bg-transparent border-top-0 p-2 pt-0 d-flex justify-content-between">
+                                <button class="btn btn-link btn-sm text-primary p-0" onclick="event.stopPropagation(); resumeSession('${s.id}')">
+                                    <i class="bi bi-arrow-right-circle me-1"></i>Open
+                                </button>
+                                <button class="btn btn-link btn-sm text-danger p-0" onclick="event.stopPropagation(); quickDelete('${s.id}')">
+                                    <i class="bi bi-trash me-1"></i>Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>`;
+            }).join('') +
+            '</div>';
+    } catch(e) { /* ignore */ }
+}
+
+function escapeHtml(text) {
+    const el = document.createElement('div');
+    el.textContent = text;
+    return el.innerHTML;
+}
+
+async function quickDelete(id) {
+    if (!confirm('Delete this idea and all its files?')) return;
+    try {
+        await fetch(`/api/idea/${id}`, { method: 'DELETE' });
+        loadSessions();
+        showToast('Idea deleted', 'success');
+    } catch(e) { showToast('Error: ' + e.message, 'danger'); }
+}
+
+async function resumeSession(id) {
+    showLoading(true, 'Loading session...');
+    try {
+        const res = await fetch(`/api/idea/${id}`);
+        if (!res.ok) { showToast('Session not found', 'danger'); return; }
+        const session = await res.json();
+        sessionId = session.id;
+        restoreSession(session);
+    } catch(e) { showToast('Error: ' + e.message, 'danger'); }
+    finally { showLoading(false); }
+}
+
+function restoreSession(session) {
+    hideAll();
+    document.getElementById('sessionList').innerHTML = '';
+
+    if (session.status === 'Clarifying' || session.status === 'ReadyToGenerate') {
+        document.getElementById('chatSection').classList.remove('d-none');
+        document.getElementById('chatMessages').innerHTML = '';
+        document.getElementById('replySection').classList.remove('d-none');
+        for (const msg of session.messages) addMessage(msg.role, msg.content);
+        updateStatus(session.status, session.clarificationRound);
+    } else if (session.status === 'PromptGenerated') {
+        document.getElementById('generationPipeline').classList.remove('d-none');
+        completePipelineStep('step-prompt');
+        document.getElementById('promptSection').classList.remove('d-none');
+        document.getElementById('promptPreview').textContent = session.generatedPrompt;
+        setTimeout(() => document.getElementById('promptSection').scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+    } else if (session.status === 'Implementing') {
+        document.getElementById('generationPipeline').classList.remove('d-none');
+        completePipelineStep('step-prompt');
+        setPipelineStep('step-implement');
+        setPipelineStatus('VS Code is generating code...');
+        connectEventStream();
+    } else if (['AwaitingApproval', 'Deploying', 'Deployed', 'DeployFailed'].includes(session.status)) {
+        showDeploySection(session);
+        if (session.status === 'Deploying') {
+            // Reconnect to whichever background deploy is running
+            document.getElementById('deployButtons').classList.add('d-none');
+            document.getElementById('autoDeployProgress').classList.remove('d-none');
+            startDeployPolling();
+        }
+    }
+}
+
+function showDeploySection(session) {
+    document.getElementById('deploySection').classList.remove('d-none');
+    document.getElementById('solutionPathDisplay').textContent = session.solutionPath || '';
+    updateDeployBadge(session.status);
+
+    const isDeployed = session.status === 'Deployed';
+    const isDeploying = session.status === 'Deploying';
+    document.getElementById('deployButtons').classList.toggle('d-none', isDeployed || isDeploying);
+    document.getElementById('deployedInfo').classList.toggle('d-none', !isDeployed);
+
+    if (isDeployed && session.deployedUrl) {
+        const link = document.getElementById('deployedLink');
+        link.href = session.deployedUrl;
+        link.textContent = session.deployedUrl;
+        document.getElementById('showcaseOptIn').classList.remove('d-none');
+        checkShowcaseStatus(session.deployedUrl);
+    }
+
+    // Populate session details (always shown once we have a session)
+    populateSessionDetails(session);
+}
+
+function populateSessionDetails(session) {
+    const section = document.getElementById('sessionDetailsSection');
+    section.classList.remove('d-none');
+
+    // Messages
+    const messagesDiv = document.getElementById('sessionDetailMessages');
+    messagesDiv.innerHTML = '';
+    for (const msg of (session.messages || [])) {
+        const div = document.createElement('div');
+        div.className = `small p-2 mb-1 rounded ${msg.role === 'user' ? 'bg-primary bg-opacity-10 border-start border-primary border-2' : 'bg-light'}`;
+        const label = document.createElement('div');
+        label.className = 'fw-semibold text-muted mb-1';
+        label.style.fontSize = '.7rem';
+        label.textContent = msg.role === 'user' ? 'You' : 'AI';
+        div.appendChild(label);
+        const content = document.createElement('div');
+        content.style.whiteSpace = 'pre-wrap';
+        content.textContent = msg.content;
+        div.appendChild(content);
+        messagesDiv.appendChild(div);
+    }
+
+    // Copilot SDK requests
+    const tbody = document.getElementById('sessionRequestsBody');
+    const requests = session.copilotRequests || [];
+    if (requests.length === 0) return;
+    const typeColors = {
+        CodeGeneration: '#569cd6', Continuation: '#ce9178', IaCGeneration: '#4ec9b0',
+        IaCFix: '#f44747', IaCConsistency: '#9cdcfe', SiteValidation: '#b5cea8',
+        DeployFix: '#ff9f43'
+    };
+    tbody.innerHTML = requests.map(r => {
+        const t = new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const color = typeColors[r.requestType] || '#d4d4d4';
+        const len = r.promptLength >= 1024 ? (r.promptLength / 1024).toFixed(1) + 'k' : r.promptLength;
+        return `<tr>
+            <td class="text-muted ps-2" style="white-space:nowrap">${t}</td>
+            <td style="color:${color};font-weight:500">${r.requestType}</td>
+            <td><code style="font-size:.75rem">${r.model}</code></td>
+            <td class="text-end text-muted pe-2">${len}</td>
+        </tr>`;
+    }).join('');
+
+    renderStepTimings(session);
+}
+
+function renderStepTimings(session) {
+    const isAdmin = (JSON.parse(localStorage.getItem('aitk_roles') || '[]')).includes('Admin');
+    const el = document.getElementById('stepTimingDetails');
+    if (!el || !isAdmin) return;
+    el.classList.remove('d-none');
+    const timings = session.stepTimings || {};
+    const content = document.getElementById('stepTimingContent');
+    const steps = Object.entries(timings);
+    if (steps.length === 0) {
+        content.innerHTML = '<div class="text-center text-muted small py-2">No timing data</div>';
+        return;
+    }
+    const labels = { clarification: 'Clarification', prompt: 'Prompt Generation', codegen: 'Code Generation', deploy: 'Deploy' };
+    const icons = { clarification: 'bi-chat-dots', prompt: 'bi-file-earmark-code', codegen: 'bi-code-slash', deploy: 'bi-cloud-upload' };
+    content.innerHTML = '<div class="d-flex flex-wrap gap-2">' + steps.map(([key, t]) => {
+        const label = labels[key] || key;
+        const icon = icons[key] || 'bi-clock';
+        const dur = t.durationMs;
+        const durText = dur != null ? formatDuration(dur) : '<span class="spinner-border spinner-border-sm" style="width:.7rem;height:.7rem"></span> running';
+        return `<div class="border rounded px-2 py-1 small d-flex align-items-center gap-1" style="background:var(--bs-tertiary-bg);">
+            <i class="bi ${icon} text-primary"></i>
+            <span class="fw-semibold">${label}:</span>
+            <span>${durText}</span>
+        </div>`;
+    }).join('') + '</div>';
+}
+
+function formatDuration(ms) {
+    if (ms < 1000) return ms + 'ms';
+    var s = ms / 1000;
+    if (s < 60) return s.toFixed(1) + 's';
+    var m = Math.floor(s / 60);
+    var secs = Math.round(s % 60);
+    return m + 'm ' + secs + 's';
+}
+
+async function checkShowcaseStatus(url) {
+    try {
+        const r = await fetch('/api/showcase/public');
+        if (!r.ok) return;
+        const entries = await r.json();
+        const match = entries.find(e => e.url === url);
+        document.getElementById('showcaseCheckbox').checked = !!match;
+    } catch { /* silent */ }
+}
+
+async function toggleShowcaseOptIn() {
+    const cb = document.getElementById('showcaseCheckbox');
+    const url = document.getElementById('deployedLink')?.href;
+    if (!url || !sessionId) return;
+    try {
+        if (cb.checked) {
+            const r = await fetch('/api/showcase/opt-in', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: url, title: null })
+            });
+            if (!r.ok) { cb.checked = false; }
+        } else {
+            const r = await fetch('/api/showcase/opt-out?url=' + encodeURIComponent(url), {
+                method: 'DELETE'
+            });
+            if (!r.ok) { cb.checked = true; }
+        }
+    } catch { cb.checked = !cb.checked; }
+}
+
+async function startAutoDeploy() {
+    if (!sessionId) return;
+    updateDeployBadge('Deploying');
+    document.getElementById('deployButtons').classList.add('d-none');
+    const progress = document.getElementById('autoDeployProgress');
+    const progressText = document.getElementById('autoDeployProgressText');
+    progress.classList.remove('d-none');
+    progressText.textContent = 'Auto-deploying to GitHub Pages...';
+
+    try {
+        const res = await fetch(`/api/idea/${sessionId}/auto-deploy`, { method: 'POST' });
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            progress.classList.add('d-none');
+            document.getElementById('deployButtons').classList.remove('d-none');
+            updateDeployBadge('DeployFailed');
+            showToast(data.error || 'Auto-deploy failed to start', 'danger');
+            return;
+        }
+    } catch(e) {
+        progress.classList.add('d-none');
+        document.getElementById('deployButtons').classList.remove('d-none');
+        showToast('Error: ' + e.message, 'danger');
+        return;
+    }
+
+    // Poll until deployed or failed
+    const poll = setInterval(async () => {
+        try {
+            const sesRes = await fetch(`/api/idea/${sessionId}`);
+            if (!sesRes.ok) return;
+            const session = await sesRes.json();
+
+            if (session.status === 'Deploying') {
+                // Update progress text based on deploy error presence (fix in progress)
+                progressText.textContent = session.deployError
+                    ? 'Deploy fix in progress — retrying...'
+                    : 'Auto-deploying to GitHub Pages...';
+                return;
+            }
+
+            clearInterval(poll);
+            progress.classList.add('d-none');
+
+            if (session.status === 'Deployed') {
+                showDeploySection(session);
+                showToast('Deployed to GitHub Pages!', 'success');
+            } else {
+                document.getElementById('deployButtons').classList.remove('d-none');
+                updateDeployBadge('DeployFailed');
+                showDeploySection(session);
+                showToast('Auto-deploy failed: ' + (session.deployError || 'Unknown error'), 'danger');
+            }
+        } catch(e) { /* ignore */ }
+    }, 3000);
+}
+
+async function startSession() {
+    const idea = document.getElementById('ideaInput').value.trim();
+    if (!idea) return;
+
+    document.getElementById('btnStart').disabled = true;
+    showLoading(true, 'AI is thinking...');
+
+    try {
+        const res = await fetch('/api/idea/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idea })
+        });
+        const data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Failed to start', 'danger'); return; }
+
+        sessionId = data.id;
+        hideAll();
+        document.getElementById('sessionList').innerHTML = '';
+        document.getElementById('chatSection').classList.remove('d-none');
+        document.getElementById('chatMessages').innerHTML = '';
+        document.getElementById('replySection').classList.remove('d-none');
+
+        for (const msg of data.messages) addMessage(msg.role, msg.content);
+        updateStatus(data.status, data.clarificationRound);
+    } catch(e) { showToast('Error: ' + e.message, 'danger'); }
+    finally {
+        showLoading(false);
+        document.getElementById('btnStart').disabled = false;
+    }
+}
+
+async function sendReply() {
+    const input = document.getElementById('replyInput');
+    const text = input.value.trim();
+    if (!text || !sessionId) return;
+
+    input.value = '';
+    addMessage('user', text);
+    showLoading(true, 'AI is thinking...');
+
+    try {
+        const res = await fetch(`/api/idea/${sessionId}/respond`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: text })
+        });
+        const data = await res.json();
+        addMessage('assistant', data.message.content);
+        updateStatus(data.status, data.clarificationRound);
+    } catch(e) { showToast('Error: ' + e.message, 'danger'); }
+    finally { showLoading(false); }
+}
+
+function setPipelineStep(step) {
+    ['step-prompt', 'step-implement', 'step-deploy'].forEach(id => {
+        document.getElementById(id).classList.remove('active', 'done');
+        document.getElementById(id).querySelector('.step-status').innerHTML = '';
+    });
+    const steps = ['step-prompt', 'step-implement', 'step-deploy'];
+    const idx = steps.indexOf(step);
+    for (let i = 0; i < idx; i++) {
+        document.getElementById(steps[i]).classList.add('done');
+        document.getElementById(steps[i]).querySelector('.step-status').innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+    }
+    document.getElementById(step).classList.add('active');
+    document.getElementById(step).querySelector('.step-status').innerHTML = '<span class="spinner-border spinner-border-sm text-primary"></span>';
+}
+
+function completePipelineStep(step) {
+    document.getElementById(step).classList.remove('active');
+    document.getElementById(step).classList.add('done');
+    document.getElementById(step).querySelector('.step-status').innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+}
+
+function failPipelineStep(step) {
+    document.getElementById(step).classList.remove('active');
+    document.getElementById(step).classList.add('text-danger');
+    document.getElementById(step).querySelector('.step-status').innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i>';
+}
+
+function setPipelineStatus(text) {
+    const el = document.getElementById('pipelineStatus');
+    if (text) {
+        el.textContent = text;
+        el.classList.remove('d-none');
+    } else {
+        el.textContent = '';
+        el.classList.add('d-none');
+    }
+}
+
+async function startBuilding() {
+    if (!sessionId) return;
+    await generatePrompt();
+    if (document.getElementById('promptSection').classList.contains('d-none')) return;
+    implement('codeChatCli');
+}
+
+async function generatePrompt(useAi = false) {
+    if (!sessionId) return;
+
+    hideAll();
+    document.getElementById('generationPipeline').classList.remove('d-none');
+    setPipelineStep('step-prompt');
+    setPipelineStatus(useAi ? 'AI is rewriting your build prompt...' : 'Building your prompt...');
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10 * 60 * 1000);
+        const url = `/api/idea/${sessionId}/generate` + (useAi ? '?ai=true' : '');
+        const res = await fetch(url, { method: 'POST', signal: controller.signal });
+        clearTimeout(timeoutId);
+        const data = await res.json();
+
+        completePipelineStep('step-prompt');
+        setPipelineStatus('');
+        document.getElementById('promptSection').classList.remove('d-none');
+        document.getElementById('promptPreview').textContent = data.generatedPrompt;
+        setTimeout(() => document.getElementById('promptSection').scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+    } catch(e) {
+        const msg = e.name === 'AbortError'
+            ? 'Prompt generation timed out. The AI model may be overloaded — please try again.'
+            : 'Error: ' + e.message;
+        showToast(msg, 'danger');
+        failPipelineStep('step-prompt');
+        setPipelineStatus('');
+        document.getElementById('generationPipeline').classList.add('d-none');
+        document.getElementById('startSection').classList.remove('d-none');
+    }
+}
+
+async function regeneratePrompt() {
+    await generatePrompt(true);
+}
+
+let _ideaProviderUI = null;
+
+async function implement(method) {
+    if (!sessionId) return;
+
+    document.getElementById('promptSection').classList.add('d-none');
+    document.getElementById('generationPipeline').classList.remove('d-none');
+    setPipelineStep('step-implement');
+    setPipelineStatus(method === 'codeChatCli' ? 'Launching VS Code...' : 'Preparing prompt file...');
+
+    try {
+        const provider = _ideaProviderUI ? _ideaProviderUI.getProvider() : null;
+        const url = `/api/idea/${sessionId}/implement?method=${method}` + (provider ? `&provider=${encodeURIComponent(provider)}` : '');
+        const res = await fetch(url, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) {
+            showToast(data.error || 'Code generation failed to start', 'danger');
+            setPipelineStatus('');
+            document.getElementById('generationPipeline').classList.add('d-none');
+            document.getElementById('promptSection').classList.remove('d-none');
+            return;
+        }
+
+        if (method === 'codeChatCli') {
+            setPipelineStatus('VS Code is generating code...');
+            showToast('VS Code launched! Streaming live output...', 'info');
+            saveIdeaActiveSession();
+            connectEventStream();
+        } else {
+            completePipelineStep('step-implement');
+            completePipelineStep('step-deploy');
+            setPipelineStatus('');
+            hideAll();
+            showDeploySection(data);
+            showToast('Prompt file ready', 'success');
+        }
+    } catch(e) {
+        showToast('Error: ' + e.message, 'danger');
+        setPipelineStatus('');
+        document.getElementById('generationPipeline').classList.add('d-none');
+        document.getElementById('promptSection').classList.remove('d-none');
+    }
+}
+
+let eventSource = null;
+
+let copilotRequests = [];
+
+function clearUsagePanel() {
+    copilotRequests = [];
+    const tbody = document.getElementById('usageTableBody');
+    if (tbody) tbody.innerHTML = '<tr id="usageEmptyRow"><td colspan="4" class="text-center text-muted py-5"><i class="bi bi-activity d-block mb-2" style="font-size:1.5rem;opacity:.3"></i><small>No requests yet — start code generation</small></td></tr>';
+    const badge = document.getElementById('usageBadge');
+    if (badge) badge.textContent = '0';
+    const summary = document.getElementById('usageSummary');
+    if (summary) summary.textContent = '0 requests';
+}
+
+function addCopilotRequest(data) {
+    copilotRequests.push(data);
+
+    const emptyRow = document.getElementById('usageEmptyRow');
+    if (emptyRow) emptyRow.remove();
+
+    const tbody = document.getElementById('usageTableBody');
+    if (!tbody) return;
+
+    const typeColors = {
+        CodeGeneration: '#569cd6',
+        Continuation:   '#ce9178',
+        IaCGeneration:  '#4ec9b0',
+        IaCFix:         '#f44747',
+        IaCConsistency: '#9cdcfe',
+        SiteValidation: '#b5cea8'
+    };
+
+    const tr = document.createElement('tr');
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const model = (data.model || '—');
+    const requestType = data.requestType || '—';
+    const color = typeColors[requestType] || '#d4d4d4';
+    const promptLen = data.promptLength ? (data.promptLength >= 1024
+        ? (data.promptLength / 1024).toFixed(1) + 'k'
+        : data.promptLength + '') : '—';
+
+    tr.innerHTML = `
+        <td class="text-muted ps-3" style="white-space:nowrap">${timeStr}</td>
+        <td style="color:${color};font-weight:500">${requestType}</td>
+        <td><code style="font-size:.75rem;background:none;color:var(--bs-body-color)">${model}</code></td>
+        <td class="text-end text-muted pe-3" style="white-space:nowrap">${promptLen}</td>
+    `;
+    tbody.appendChild(tr);
+
+    const count = copilotRequests.length;
+    const badge = document.getElementById('usageBadge');
+    if (badge) badge.textContent = count;
+    const summary = document.getElementById('usageSummary');
+    if (summary) summary.textContent = `${count} request${count !== 1 ? 's' : ''}`;
+}
+
+function connectEventStream() {
+    if (eventSource) { eventSource.close(); eventSource = null; }
+    ideaReconnectAttempts = 0;
+    stopStatusPolling();
+    clearUsagePanel();
+
+    const logPanel = document.getElementById('logPanel');
+    const logContent = document.getElementById('logContent');
+    logPanel.classList.remove('d-none');
+    logContent.textContent = '';
+
+    eventSource = authEventSource(`/api/idea/${sessionId}/stream`);
+
+    eventSource.onmessage = function(e) {
+        try {
+            const evt = JSON.parse(e.data);
+
+            if (evt.type === 'Done') {
+                eventSource.close();
+                eventSource = null;
+
+                if (evt.detail === 'Completed') {
+                    appendLog('[DONE] Code generation complete!', '#4ec9b0');
+                    setPipelineStatus('');
+                    completePipelineStep('step-implement');
+                    completePipelineStep('step-deploy');
+                    clearIdeaActiveSession();
+
+                    (async () => {
+                        const sesRes = await fetch(`/api/idea/${sessionId}`);
+                        const session = await sesRes.json();
+                        hideAll();
+                        showDeploySection(session);
+                        startAutoDeploy();
+                    })();
+                } else {
+                    appendLog('[ERROR] ' + (evt.error || 'Generation failed'), '#f44747');
+                    failPipelineStep('step-implement');
+                    setPipelineStatus('');
+                    clearIdeaActiveSession();
+                    showToast('Code generation failed: ' + (evt.error || 'Unknown error'), 'danger');
+                    document.getElementById('promptSection').classList.remove('d-none');
+                    document.getElementById('generationPipeline').classList.add('d-none');
+                }
+                return;
+            }
+
+            if (evt.type === 'CopilotSdkRequest') {
+                try { addCopilotRequest(JSON.parse(evt.detail)); } catch(e) { /* ignore */ }
+                return;
+            }
+
+            const prefix = evt.type === 'ToolStarted' ? '[TOOL] '
+                : evt.type === 'ToolCompleted' ? '[DONE] '
+                : evt.type === 'Error' ? '[ERR]  '
+                : evt.type === 'AssistantMessage' ? '[AI]   '
+                : '[' + evt.type + '] ';
+
+            const color = evt.type === 'Error' ? '#f44747'
+                : evt.type === 'ToolStarted' ? '#569cd6'
+                : evt.type === 'ToolCompleted' ? '#4ec9b0'
+                : evt.type === 'AssistantMessage' ? '#dcdcaa'
+                : '#d4d4d4';
+
+            appendLog(prefix + (evt.detail || ''), color);
+
+            const dots = '.'.repeat((logContent.textContent.split('\n').length % 3) + 1);
+            setPipelineStatus(`Generating code${dots}`);
+
+        } catch(ex) { /* ignore parse errors */ }
+    };
+
+    eventSource.onerror = function() {
+        eventSource.close();
+        eventSource = null;
+        ideaReconnectAttempts++;
+        appendLog('[DISCONNECTED] SSE connection lost. Checking status...', '#ce9178');
+
+        (async () => {
+            try {
+                const sesRes = await fetch(`/api/idea/${sessionId}`);
+                const session = await sesRes.json();
+                if (session.status === 'AwaitingApproval') {
+                    clearIdeaActiveSession();
+                    completePipelineStep('step-implement');
+                    completePipelineStep('step-deploy');
+                    hideAll();
+                    showDeploySection(session);
+                    startAutoDeploy();
+                } else if (session.status === 'Deployed') {
+                    clearIdeaActiveSession();
+                    completePipelineStep('step-implement');
+                    completePipelineStep('step-deploy');
+                    hideAll();
+                    showDeploySection(session);
+                    showToast('Code generation complete!', 'success');
+                } else if (session.status === 'Implementing'
+                           && ideaReconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                    appendLog(`[RECONNECTING] Attempt ${ideaReconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}...`, '#ce9178');
+                    setTimeout(() => connectEventStream(), 2000);
+                } else if (session.status === 'Implementing') {
+                    appendLog('[INFO] Generation is still running. Monitoring in background...', '#dcdcaa');
+                    startStatusPolling();
+                } else if (session.status === 'PromptGenerated') {
+                    clearIdeaActiveSession();
+                    failPipelineStep('step-implement');
+                    setPipelineStatus('');
+                    document.getElementById('promptSection').classList.remove('d-none');
+                    document.getElementById('generationPipeline').classList.add('d-none');
+                    if (session.generatedPrompt) document.getElementById('promptPreview').textContent = session.generatedPrompt;
+                    showToast('Code generation failed. You can retry below.', 'warning');
+                }
+            } catch(e) { /* ignore */ }
+        })();
+    };
+}
+
+function appendLog(text, color) {
+    const logContent = document.getElementById('logContent');
+    const span = document.createElement('span');
+    span.style.color = color || '#d4d4d4';
+    span.textContent = text + '\n';
+    logContent.appendChild(span);
+    logContent.scrollTop = logContent.scrollHeight;
+}
+
+async function deployGitHub() {
+    if (!sessionId) return;
+    showLoading(true, 'Deploying to GitHub Pages...');
+    updateDeployBadge('Deploying');
+
+    try {
+        const res = await fetch(`/api/idea/${sessionId}/deploy/github`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Deploy failed', 'danger'); updateDeployBadge('DeployFailed'); return; }
+
+        showDeploySection(data);
+        showToast('Deployed to GitHub Pages!', 'success');
+    } catch(e) { showToast('Error: ' + e.message, 'danger'); updateDeployBadge('DeployFailed'); }
+    finally { showLoading(false); }
+}
+
+async function showAzureDeployPlan() {
+    if (!sessionId) return;
+    showLoading(true, 'Analyzing deployment plan...');
+
+    try {
+        const res = await fetch(`/api/idea/${sessionId}/deploy-plan`);
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            showToast(data.error || 'Failed to get deployment plan', 'danger');
+            return;
+        }
+        const plan = await res.json();
+        renderDeployPlan(plan);
+    } catch(e) { showToast('Error: ' + e.message, 'danger'); }
+    finally { showLoading(false); }
+}
+
+function renderDeployPlan(plan) {
+    document.getElementById('deployPlanSection').classList.remove('d-none');
+    document.getElementById('deployButtons').classList.add('d-none');
+
+    // Cost badge
+    const costBadge = document.getElementById('planCostBadge');
+    const cost = plan.estimatedMonthlyCostUsd;
+    costBadge.textContent = cost > 0 ? `~$${cost.toFixed(2)}/mo` : 'Free ($0/mo)';
+    costBadge.className = `badge ${cost > 0 ? 'bg-warning text-dark' : 'bg-success'}`;
+
+    // Warnings
+    const warningsDiv = document.getElementById('planWarnings');
+    warningsDiv.innerHTML = '';
+    if (plan.warnings?.length) {
+        for (const w of plan.warnings) {
+            const cls = w.level === 'Error' ? 'danger' : w.level === 'Warning' ? 'warning' : 'info';
+            const icon = w.level === 'Error' ? 'exclamation-triangle' : w.level === 'Warning' ? 'exclamation-circle' : 'info-circle';
+            warningsDiv.innerHTML += `
+                <div class="alert alert-${cls} mb-0 rounded-0 py-2 px-3 small d-flex align-items-start gap-2">
+                    <i class="bi bi-${icon} flex-shrink-0 mt-1"></i>
+                    <div>
+                        ${w.message}
+                        ${w.tooltip ? `<i class="bi bi-question-circle ms-1" data-bs-toggle="tooltip" title="${escapeHtml(w.tooltip)}"></i>` : ''}
+                    </div>
+                </div>`;
+        }
+    }
+
+    // Resources table
+    const tbody = document.getElementById('planResourcesBody');
+    tbody.innerHTML = '';
+    for (const r of (plan.resources || [])) {
+        const isFree = r.monthlyCostUsd === 0 && !r.freeTierAlternativeSku;
+        const skuBadge = isFree
+            ? `<span class="badge bg-success">Free</span>`
+            : (r.freeTierAlternativeSku
+                ? `<span class="badge bg-warning text-dark">${r.sku || 'N/A'}</span>`
+                : `<span class="badge bg-secondary">${r.sku || 'N/A'}</span>`);
+        const costText = r.monthlyCostUsd > 0 ? `$${r.monthlyCostUsd.toFixed(2)}` : 'Free';
+        const limitations = r.freeTierLimitations || '—';
+        const shortName = r.resourceType.split('/').pop();
+        tbody.innerHTML += `
+            <tr>
+                <td><code class="small">${shortName}</code>
+                    <div class="text-muted" style="font-size:0.7rem">${r.name}</div></td>
+                <td>${skuBadge}</td>
+                <td class="${r.monthlyCostUsd > 0 ? 'text-warning fw-semibold' : 'text-success'}">${costText}</td>
+                <td class="text-muted" style="font-size:0.75rem">${limitations}</td>
+            </tr>`;
+    }
+
+    // Quota
+    const quotaDiv = document.getElementById('planQuotaDetails');
+    const q = plan.quota;
+    if (q) {
+        const appBar = quotaProgressBar(q.freeAppServicePlansUsed, q.freeAppServicePlansLimit, 'App Service Plans (F1)');
+        const swaBar = quotaProgressBar(q.freeStaticWebAppsUsed, q.freeStaticWebAppsLimit, 'Static Web Apps (Free)');
+        quotaDiv.innerHTML = appBar + swaBar;
+    }
+
+    // Existing plans for reuse
+    const existingDiv = document.getElementById('planExistingPlans');
+    const existingList = document.getElementById('existingPlansList');
+    if (plan.existingAppServicePlans?.length) {
+        existingDiv.classList.remove('d-none');
+        existingList.innerHTML = plan.existingAppServicePlans
+            .map(p => `<div class="mb-1"><i class="bi bi-hdd-rack me-1 text-primary"></i>${p}</div>`)
+            .join('');
+    } else {
+        existingDiv.classList.add('d-none');
+    }
+
+    // Show/hide regenerate button based on whether paid resources exist
+    const btnRegen = document.getElementById('btnRegenFree');
+    btnRegen.style.display = plan.usesFreeTierOnly ? 'none' : 'inline-block';
+
+    // Disable confirm if error-level warnings exist
+    const hasErrors = plan.warnings?.some(w => w.level === 'Error');
+    const btnConfirm = document.getElementById('btnConfirmDeploy');
+    if (hasErrors) {
+        btnConfirm.classList.add('btn-outline-danger');
+        btnConfirm.classList.remove('btn-primary');
+        btnConfirm.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>Deploy Anyway (risky)';
+    } else {
+        btnConfirm.classList.remove('btn-outline-danger');
+        btnConfirm.classList.add('btn-primary');
+        btnConfirm.innerHTML = '<i class="bi bi-cloud-upload me-1"></i>Confirm Deploy';
+    }
+
+    initTooltips();
+}
+
+function quotaProgressBar(used, limit, label) {
+    const pct = limit > 0 ? Math.min((used / limit) * 100, 100) : 0;
+    const color = pct >= 100 ? 'bg-danger' : pct >= 80 ? 'bg-warning' : 'bg-success';
+    return `
+        <div class="mb-2">
+            <div class="d-flex justify-content-between mb-1">
+                <span>${label}</span>
+                <span class="fw-semibold">${used}/${limit}</span>
+            </div>
+            <div class="progress" style="height:6px">
+                <div class="progress-bar ${color}" style="width:${pct}%"></div>
+            </div>
+        </div>`;
+}
+
+function hidePlanSection() {
+    document.getElementById('deployPlanSection').classList.add('d-none');
+    document.getElementById('deployButtons').classList.remove('d-none');
+}
+
+async function confirmAzureDeploy() {
+    if (!sessionId) return;
+    document.getElementById('deployPlanSection').classList.add('d-none');
+    showLoading(true, 'Starting deployment...');
+    updateDeployBadge('Deploying');
+
+    try {
+        const res = await fetch(`/api/idea/${sessionId}/deploy/azure`, { method: 'POST' });
+        const text = await res.text();
+        let data;
+        try { data = JSON.parse(text); } catch { showToast(text.slice(0, 200) || 'Deploy failed', 'danger'); updateDeployBadge('DeployFailed'); return; }
+        if (!res.ok) { showToast(data.error || 'Deploy failed', 'danger'); updateDeployBadge('DeployFailed'); return; }
+
+        showDeploySection(data);
+        startDeployPolling();
+    } catch(e) { showToast('Error: ' + e.message, 'danger'); updateDeployBadge('DeployFailed'); }
+    finally { showLoading(false); }
+}
+
+async function regenerateForFreeTier() {
+    if (!sessionId || !confirm('This will regenerate the code using only free Azure resources. Current solution will be replaced. Continue?')) return;
+    hidePlanSection();
+    showLoading(true, 'Regenerating for free tier...');
+
+    try {
+        // Re-implement with method that forces free tier
+        const res = await fetch(`/api/idea/${sessionId}/implement?method=codeChatCli&forceFreeTier=true`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Failed to start regeneration', 'danger'); return; }
+
+        restoreSession(data);
+    } catch(e) { showToast('Error: ' + e.message, 'danger'); }
+    finally { showLoading(false); }
+}
+
+function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function initTooltips() {
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+        if (!el._tooltip) el._tooltip = new bootstrap.Tooltip(el);
+    });
+}
+
+async function teardown() {
+    if (!sessionId || !confirm('Tear down the deployment? The solution files will remain.')) return;
+    showLoading(true, 'Tearing down...');
+
+    try {
+        const res = await fetch(`/api/idea/${sessionId}/teardown`, { method: 'POST' });
+        const data = await res.json();
+        showDeploySection(data.session);
+        showToast('Deployment torn down', 'success');
+    } catch(e) { showToast('Error: ' + e.message, 'danger'); }
+    finally { showLoading(false); }
+}
+
+async function deleteSession() {
+    if (!sessionId || !confirm('Delete this idea session and all its files?')) return;
+    showLoading(true, 'Deleting...');
+
+    try {
+        await fetch(`/api/idea/${sessionId}`, { method: 'DELETE' });
+        sessionId = null;
+        resetToStart();
+        showToast('Session deleted', 'success');
+    } catch(e) { showToast('Error: ' + e.message, 'danger'); }
+    finally { showLoading(false); }
+}
+
+function resetToStart() {
+    clearIdeaActiveSession();
+    sessionId = null;
+    hideAll();
+    document.getElementById('startSection').classList.remove('d-none');
+    document.getElementById('ideaInput').value = '';
+    document.getElementById('chatMessages').innerHTML = '';
+    document.getElementById('readyBanner').classList.add('d-none');
+    document.getElementById('replySection').classList.remove('d-none');
+    loadSessions();
+}
+
+// Init — auto-restore active session or show session list
+(async function initIdea() {
+    try {
+        _ideaProviderUI = await window.LlmProviderUI.mount({
+            containerId: 'ideaProviderSelector',
+            kind: 'codegen',
+            label: 'AI Provider for Code Generation',
+            helpText: 'Picks the LLM that will generate the project code in this run.'
+        });
+    } catch (e) { console.warn('LlmProviderUI mount failed', e); }
+
+    const savedId = sessionStorage.getItem('idea_active_session');
+    if (savedId) {
+        try {
+            const res = await fetch(`/api/idea/${savedId}`);
+            if (res.ok) {
+                const session = await res.json();
+                if (session.status === 'Implementing') {
+                    sessionId = session.id;
+                    restoreSession(session);
+                    return;
+                } else if (session.status === 'AwaitingApproval' || session.status === 'Deployed'
+                           || session.status === 'Deploying' || session.status === 'DeployFailed') {
+                    clearIdeaActiveSession();
+                    sessionId = session.id;
+                    restoreSession(session);
+                    return;
+                }
+            }
+        } catch(e) { /* ignore, fall through */ }
+        clearIdeaActiveSession();
+    }
+    loadSessions();
+})();
+</script>

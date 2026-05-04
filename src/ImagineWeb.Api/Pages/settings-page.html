@@ -1,0 +1,510 @@
+<div class="page-header">
+    <h1><i class="bi bi-sliders me-2"></i>Settings</h1>
+    <p>Configure AI providers, pipeline thresholds, deployment credentials, and more</p>
+</div>
+
+<div id="settingsAlert" class="alert alert-success d-none">
+    <i class="bi bi-check-circle me-2"></i>
+    <span id="settingsAlertText"></span>
+</div>
+
+<div id="settingsLoading">
+    <div class="card skeleton skeleton-card mb-3"><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-text" style="width:80%"></div><div class="skeleton skeleton-text" style="width:60%"></div></div>
+    <div class="card skeleton skeleton-card mb-3"><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-text" style="width:70%"></div><div class="skeleton skeleton-text" style="width:50%"></div></div>
+    <div class="card skeleton skeleton-card mb-3"><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-text" style="width:75%"></div></div>
+</div>
+
+<div id="settingsContainer" class="d-none"></div>
+
+<div id="settingsActions" class="d-none">
+    <div class="settings-sticky-bar">
+        <div class="d-flex gap-2 align-items-center">
+            <button class="btn btn-primary" id="btnSaveSettings" onclick="saveSettings()">
+                <i class="bi bi-save me-1"></i>Save Settings
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="loadSettings()">
+                <i class="bi bi-arrow-clockwise me-1"></i>Reload
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+.settings-section { margin-bottom: 1rem; }
+.settings-section .card-header { cursor: pointer; user-select: none; transition: background var(--at-transition, .2s); }
+.settings-section .card-header:hover { background: var(--at-accent-soft, #e7f1ff); }
+[data-bs-theme="dark"] .settings-section .card-header:hover { background: var(--at-accent-soft, #1a2940); }
+.field-desc { font-size: 0.8rem; color: #6c757d; margin-top: 0.15rem; }
+.seed-topic-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center; }
+.seed-topic-row input { flex: 1; }
+.settings-sticky-bar { position: sticky; bottom: 0; background: var(--bs-body-bg, #fff); border-top: 1px solid var(--at-card-border, #dee2e6); padding: .75rem 0; z-index: 10; box-shadow: 0 -2px 8px rgba(0,0,0,0.06); }
+.config-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: .5rem; flex-shrink: 0; }
+.config-dot-ok { background: #198754; }
+.config-dot-empty { background: #ffc107; }
+.section-details { margin-bottom: 1rem; padding: 0.5rem 0.75rem; border-radius: 0.375rem; background: var(--at-accent-soft, rgba(79,70,229,0.06)); }
+.section-details summary { cursor: pointer; user-select: none; }
+.section-details summary::-webkit-details-marker { display: none; }
+.section-details summary::marker { display: none; content: ''; }
+.section-details[open] summary .bi-info-circle::before { content: '\f62a'; }
+</style>
+
+<script>
+let settingsData = {};
+const sectionLabels = {
+    'Ollama': { icon: 'bi-pc-display', title: 'Ollama (Local LLM)', desc: 'Settings for local Ollama model — free, offline, private',
+        details: 'Configuration for the local Ollama LLM server. Used when Analysis or CodeGenerator provider is set to "Ollama". Runs entirely offline without API costs. Affects analysis speed and quality based on the chosen model and context window size.' },
+    'CopilotSdkAnalysis': { icon: 'bi-github', title: 'Copilot SDK (Analysis)', desc: 'GitHub Copilot for analysis — high quality, requires Copilot license',
+        details: 'GitHub Copilot SDK for page analysis. Requires an active GitHub Copilot license. Produces high-quality results but consumes premium requests. Controls concurrency and reasoning depth. GitHubToken bypasses interactive login.' },
+    'CodeGenerator': { icon: 'bi-code-slash', title: 'Code Generator', desc: 'Engine that builds apps from opportunity specs',
+        details: 'Engine that transforms opportunity specs or user ideas into working applications. Supports multiple providers: Copilot SDK, Ollama, OpenAI, Anthropic. Directly affects "Build from Idea" and "Build from Hunter" flows. Fallback generator activates if the primary engine fails.' },
+    'Hunter': { icon: 'bi-search', title: 'Hunter Pipeline', desc: 'Controls for the autonomous search → scrape → analyze pipeline',
+        details: 'Controls the autonomous search → scrape → analyze pipeline. Thread counts, queue sizes, scoring thresholds, and session limits directly affect discovery speed and depth. DeepDiveThreshold and Phase2Threshold control which pages get deeper analysis. MaxPagesPerSession triggers automatic topic cycling.' },
+    'SeedTopics': { icon: 'bi-signpost-split', title: 'Seed Topics', desc: 'Bootstrap queries that start discovery when pipeline launches',
+        details: 'Bootstrap search queries that initiate the Hunter pipeline. These are the first search terms used to discover opportunities. The pipeline automatically generates new topics as it processes results, so seed topics only matter for the initial run.' },
+    'Executor': { icon: 'bi-play-circle', title: 'Executor', desc: 'Code generation triggers, GitHub integration, auto-approval',
+        details: 'GitHub integration for deploying generated applications. GitHubUsername is used when deploying to GitHub Pages. SolutionsBasePath defines where generated code is stored on disk. Required by Build from Idea and Build from Hunter flows.' },
+    'AzureDeployment': { icon: 'bi-cloud', title: 'Azure Deployment', desc: 'Service principal credentials for deploying apps to Azure',
+        details: 'Azure service principal credentials for deploying generated applications to Azure. Required for Azure Static Web Apps and App Service deployments. PreferFreeTier selects free-tier SKUs where available. Used by Build from Idea and Build from Hunter deployment steps.' },
+    'AzureDevOps': { icon: 'bi-kanban', title: 'Azure DevOps', desc: 'CI/CD pipeline integration for automated builds and deployments',
+        details: 'Azure DevOps CI/CD integration. Configures organization, project, and PAT for automated pipeline creation. Enables continuous deployment after the initial build. DefaultBranch determines which branch triggers pipelines.' },
+    'OpenAi': { icon: 'bi-robot', title: 'OpenAI / OpenAI-compatible', desc: 'OpenAI API or compatible endpoints (OpenRouter, DeepSeek, Groq)',
+        details: 'OpenAI or compatible API settings (OpenRouter, DeepSeek, Together, Groq). Used when selected as Analysis or CodeGenerator provider. Set BaseUrl to use alternative endpoints. SecondaryModel serves as a cheaper/faster fallback for lighter tasks.' },
+    'Anthropic': { icon: 'bi-chat-dots', title: 'Anthropic Claude', desc: 'Anthropic Claude models for analysis and code generation',
+        details: 'Anthropic Claude model settings. Used when selected as Analysis or CodeGenerator provider. Known for detailed, nuanced analysis output. SecondaryModel serves as a cheaper/faster fallback for lighter tasks.' },
+    'Search': { icon: 'bi-globe', title: 'Search Engines', desc: 'Search engine endpoints used by the Hunter pipeline',
+        details: 'Search engine endpoints used by the Hunter pipeline to discover pages. SearXNG is a self-hosted meta-search engine that aggregates results from multiple search providers. The SearXNG launcher below lets you start/stop the local instance directly.' }
+};
+
+async function loadSettings() {
+    try {
+        const res = await fetch('/api/settings');
+        settingsData = await res.json();
+        renderSettings();
+        renderSearxngLauncher();
+    } catch(e) {
+        showToast('Failed to load settings: ' + e.message, 'danger');
+    }
+}
+
+function renderSettings() {
+    const container = document.getElementById('settingsContainer');
+    container.innerHTML = '';
+    container.classList.remove('d-none');
+    document.getElementById('settingsLoading').classList.add('d-none');
+    document.getElementById('settingsActions').classList.remove('d-none');
+
+    for (const [section, fields] of Object.entries(settingsData)) {
+        const meta = sectionLabels[section] || { icon: 'bi-gear', title: section, desc: '' };
+
+        // Seed topics is a special section
+        if (fields && fields.type === 'seedTopics') {
+            container.innerHTML += renderSeedTopics(section, meta, fields);
+            continue;
+        }
+
+        if (!Array.isArray(fields)) continue;
+
+        const fieldHtml = fields.map(f => renderField(f)).join('');
+        const id = 'collapse-' + section;
+        const hasValues = fields.some(f => f.value != null && f.value !== '' && f.value !== 'false' && f.value !== false);
+        const dotClass = hasValues ? 'config-dot config-dot-ok' : 'config-dot config-dot-empty';
+        const dotTitle = hasValues ? 'Configured' : 'Not configured';
+        const detailsHtml = meta.details ? `<details class="section-details"><summary class="small text-muted"><i class="bi bi-info-circle me-1"></i>How this section affects the platform</summary><div class="small text-muted mt-1 ps-3">${esc(meta.details)}</div></details>` : '';
+
+        container.innerHTML += `
+        <div class="settings-section">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center"
+                     data-bs-toggle="collapse" data-bs-target="#${id}">
+                    <div class="d-flex align-items-center">
+                        <i class="bi ${meta.icon} me-2 text-primary"></i>
+                        <span class="fw-semibold">${meta.title}</span>
+                        <span class="text-muted ms-2 small">${meta.desc}</span>
+                        <span class="${dotClass}" title="${dotTitle}" data-bs-toggle="tooltip"></span>
+                    </div>
+                    <i class="bi bi-chevron-down"></i>
+                </div>
+                <div id="${id}" class="collapse">
+                    <div class="card-body">${detailsHtml}${fieldHtml}</div>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    if (document.querySelector('[data-copilot-model-select]')) {
+        loadCopilotModels();
+    }
+    if (document.querySelector('[data-codegen-model-select]')) {
+        loadCodegenModels();
+        hookCodegenProviderChange();
+    }
+
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+}
+
+function renderField(f) {
+    const val = f.value ?? '';
+    let input = '';
+
+    if (f.inputType === 'select') {
+        const opts = (f.options || []).map(o =>
+            `<option value="${esc(o)}" ${o === val ? 'selected' : ''}>${esc(o)}</option>`
+        ).join('');
+        input = `<select class="form-select form-select-sm" data-key="${esc(f.key)}">${opts}</select>`;
+    } else if (f.inputType === 'copilot-model-select') {
+        const spinnerId = 'copilot-spinner-' + esc(f.key.replace(/:/g, '-'));
+        const currentOpt = val ? `<option value="${esc(val)}" selected>${esc(val)}</option>` : `<option value="">Loading models...</option>`;
+        input = `<div class="d-flex gap-2 align-items-center">
+            <select class="form-select form-select-sm flex-fill" data-key="${esc(f.key)}" data-copilot-model-select>${currentOpt}</select>
+            <span class="spinner-border spinner-border-sm text-muted" id="${spinnerId}" role="status"></span>
+        </div>`;
+    } else if (f.inputType === 'codegen-model-select') {
+        const spinnerId = 'codegen-spinner-' + esc(f.key.replace(/:/g, '-'));
+        const currentOpt = val ? `<option value="${esc(val)}" selected>${esc(val)}</option>` : `<option value="">Loading models...</option>`;
+        input = `<div class="d-flex gap-2 align-items-center">
+            <select class="form-select form-select-sm flex-fill" data-key="${esc(f.key)}" data-codegen-model-select>${currentOpt}</select>
+            <span class="spinner-border spinner-border-sm text-muted" id="${spinnerId}" role="status"></span>
+            <span class="badge bg-secondary" id="codegen-ollama-status" style="display:none"></span>
+        </div>`;
+    } else if (f.inputType === 'checkbox') {
+        const checked = val === 'True' || val === 'true' || val === true ? 'checked' : '';
+        input = `<div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" data-key="${esc(f.key)}" ${checked}/>
+        </div>`;
+    } else if (f.inputType === 'password') {
+        input = `<div class="input-group input-group-sm">
+            <input type="password" class="form-control form-control-sm" data-key="${esc(f.key)}" value="${esc(val)}"/>
+            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword(this)">
+                <i class="bi bi-eye"></i>
+            </button>
+        </div>`;
+    } else if (f.inputType === 'number') {
+        input = `<input type="number" class="form-control form-control-sm" data-key="${esc(f.key)}" value="${esc(val)}" style="max-width:180px"/>`;
+    } else {
+        input = `<input type="text" class="form-control form-control-sm" data-key="${esc(f.key)}" value="${esc(val)}"/>`;
+    }
+
+    return `<div class="mb-3 row align-items-start">
+        <label class="col-sm-3 col-form-label col-form-label-sm fw-semibold">${esc(f.label)}</label>
+        <div class="col-sm-9">
+            ${input}
+            ${renderDescription(f.description)}
+        </div>
+    </div>`;
+}
+
+function renderDescription(desc) {
+    if (!desc) return '';
+    const parts = desc.split('||');
+    const mainText = parts[0].trim();
+    if (parts.length > 1) {
+        const tooltip = esc(parts[1].trim());
+        return `<div class="field-desc">${esc(mainText)} <i class="bi bi-question-circle text-muted" data-bs-toggle="tooltip" data-bs-placement="top" title="${tooltip}" style="cursor:help"></i></div>`;
+    }
+    return `<div class="field-desc">${esc(mainText)}</div>`;
+}
+
+function renderSeedTopics(section, meta, data) {
+    const id = 'collapse-' + section;
+    const hasItems = (data.items || []).some(t => t.trim().length > 0);
+    const dotClass = hasItems ? 'config-dot config-dot-ok' : 'config-dot config-dot-empty';
+    const dotTitle = hasItems ? 'Configured' : 'No topics';
+    const rows = (data.items || []).map((t, i) =>
+        `<div class="seed-topic-row">
+            <input type="text" class="form-control form-control-sm seed-topic-input" value="${esc(t)}"/>
+            <button class="btn btn-sm btn-outline-danger" onclick="this.parentElement.remove()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>`
+    ).join('');
+
+    return `
+    <div class="settings-section">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center"
+                 data-bs-toggle="collapse" data-bs-target="#${id}">
+                <div class="d-flex align-items-center">
+                    <i class="bi ${meta.icon} me-2 text-primary"></i>
+                    <span class="fw-semibold">${meta.title}</span>
+                    <span class="text-muted ms-2 small">${meta.desc}</span>
+                    <span class="${dotClass}" title="${dotTitle}" data-bs-toggle="tooltip"></span>
+                </div>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div id="${id}" class="collapse">
+                <div class="card-body">
+                    <div class="field-desc mb-3">${esc(data.description)}</div>
+                    <div id="seedTopicsList">${rows}</div>
+                    <button class="btn btn-sm btn-outline-primary mt-2" onclick="addSeedTopic()">
+                        <i class="bi bi-plus-lg me-1"></i>Add Topic
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>`;
+}
+
+function addSeedTopic() {
+    const list = document.getElementById('seedTopicsList');
+    const row = document.createElement('div');
+    row.className = 'seed-topic-row';
+    row.innerHTML = `
+        <input type="text" class="form-control form-control-sm seed-topic-input" value="" placeholder="e.g. AI writing tools comparison"/>
+        <button class="btn btn-sm btn-outline-danger" onclick="this.parentElement.remove()">
+            <i class="bi bi-x-lg"></i>
+        </button>`;
+    list.appendChild(row);
+    row.querySelector('input').focus();
+}
+
+function togglePassword(btn) {
+    const input = btn.parentElement.querySelector('input');
+    const icon = btn.querySelector('i');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'bi bi-eye-slash';
+    } else {
+        input.type = 'password';
+        icon.className = 'bi bi-eye';
+    }
+}
+
+async function saveSettings() {
+    const btn = document.getElementById('btnSaveSettings');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
+
+    const payload = {};
+
+    // Collect regular fields
+    document.querySelectorAll('[data-key]').forEach(el => {
+        const key = el.dataset.key;
+        if (el.type === 'checkbox') {
+            payload[key] = el.checked ? 'true' : 'false';
+        } else {
+            payload[key] = el.value;
+        }
+    });
+
+    // Collect seed topics
+    const topicInputs = document.querySelectorAll('.seed-topic-input');
+    topicInputs.forEach((input, i) => {
+        const val = input.value.trim();
+        if (val) {
+            payload[`Hunter:SeedTopics:${i}`] = val;
+        }
+    });
+
+    try {
+        const res = await fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+            const alert = document.getElementById('settingsAlert');
+            const text = document.getElementById('settingsAlertText');
+            text.textContent = data.message;
+            alert.classList.remove('d-none');
+            showToast(data.message, 'success');
+        } else {
+            showToast(data.error || 'Save failed', 'danger');
+        }
+    } catch(e) {
+        showToast('Network error: ' + e.message, 'danger');
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-save me-1"></i>Save Settings';
+}
+
+function esc(s) {
+    if (s == null) return '';
+    const d = document.createElement('div');
+    d.textContent = String(s);
+    return d.innerHTML;
+}
+
+async function loadCopilotModels() {
+    try {
+        const res = await fetch('/api/settings/copilot-models');
+        if (!res.ok) return;
+        const models = await res.json();
+
+        document.querySelectorAll('[data-copilot-model-select]').forEach(select => {
+            const currentVal = select.value;
+            let opts = '<option value="">-- select model --</option>';
+            opts += models.map(m => `<option value="${esc(m.id)}" ${m.id === currentVal ? 'selected' : ''}>${esc(m.name || m.id)}</option>`).join('');
+            select.innerHTML = opts;
+        });
+    } catch(e) { /* leave as-is if models can't be loaded */ }
+    finally {
+        document.querySelectorAll('[id^="copilot-spinner-"]').forEach(el => el.remove());
+    }
+}
+
+let _codegenCopilotModels = [];
+let _codegenOllamaModels = [];
+let _ollamaRunning = false;
+
+async function loadCodegenModels() {
+    const [copilotRes, ollamaRes] = await Promise.all([
+        fetch('/api/settings/copilot-models').then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch('/api/settings/ollama-status').then(r => r.ok ? r.json() : { running: false, models: [] }).catch(() => ({ running: false, models: [] }))
+    ]);
+
+    _codegenCopilotModels = copilotRes;
+    _codegenOllamaModels = ollamaRes.models || [];
+    _ollamaRunning = ollamaRes.running;
+
+    const statusBadge = document.getElementById('codegen-ollama-status');
+    if (statusBadge) {
+        if (_ollamaRunning) {
+            statusBadge.textContent = `Ollama: ${_codegenOllamaModels.length} model(s)`;
+            statusBadge.className = 'badge bg-success';
+            statusBadge.style.display = '';
+        } else {
+            statusBadge.textContent = 'Ollama: offline';
+            statusBadge.className = 'badge bg-secondary';
+            statusBadge.style.display = '';
+        }
+    }
+
+    updateCodegenModelSelect();
+    document.querySelectorAll('[id^="codegen-spinner-"]').forEach(el => el.remove());
+}
+
+function updateCodegenModelSelect() {
+    const providerSelect = document.querySelector('[data-key="CodeGenerator:Provider"]');
+    const provider = providerSelect ? providerSelect.value : 'copilotSdk';
+
+    document.querySelectorAll('[data-codegen-model-select]').forEach(select => {
+        const currentVal = select.value;
+        let opts = '<option value="">-- select model --</option>';
+
+        if (provider === 'ollama') {
+            if (_ollamaRunning && _codegenOllamaModels.length > 0) {
+                opts += _codegenOllamaModels.map(m => {
+                    const label = m.parameterSize ? `${m.name} (${m.parameterSize}, ${m.quantization || '?'})` : m.name;
+                    return `<option value="${esc(m.id)}" ${m.id === currentVal ? 'selected' : ''}>${esc(label)}</option>`;
+                }).join('');
+            } else {
+                opts = '<option value="">Ollama is not running or has no models</option>';
+            }
+        } else if (provider === 'openai' || provider === 'anthropic' || provider === 'vsCodeCli') {
+            // Free-form: replace select with text input so the user can type any model id.
+            const wrapper = select.parentElement;
+            const placeholder = provider === 'openai'
+                ? 'e.g. gpt-4o-mini, gpt-4.1, o1-mini'
+                : provider === 'anthropic'
+                    ? 'e.g. claude-sonnet-4-5, claude-opus-4-5'
+                    : 'model id';
+            wrapper.innerHTML = `<input type="text" class="form-control form-control-sm" data-key="${select.getAttribute('data-key')}" data-codegen-model-select value="${esc(currentVal || '')}" placeholder="${placeholder}" />`;
+            return;
+        } else {
+            opts += _codegenCopilotModels.map(m =>
+                `<option value="${esc(m.id)}" ${m.id === currentVal ? 'selected' : ''}>${esc(m.name || m.id)}</option>`
+            ).join('');
+        }
+
+        // If the element was replaced by a text input previously, re-create the select.
+        if (select.tagName !== 'SELECT') {
+            const wrapper = select.parentElement;
+            wrapper.innerHTML = `<select class="form-select form-select-sm flex-fill" data-key="${select.getAttribute('data-key')}" data-codegen-model-select>${opts}</select>`;
+        } else {
+            select.innerHTML = opts;
+        }
+    });
+}
+
+function hookCodegenProviderChange() {
+    const providerSelect = document.querySelector('[data-key="CodeGenerator:Provider"]');
+    if (providerSelect) {
+        providerSelect.addEventListener('change', () => updateCodegenModelSelect());
+    }
+}
+
+async function renderSearxngLauncher() {
+    const searchCollapse = document.getElementById('collapse-Search');
+    if (!searchCollapse) return;
+    const body = searchCollapse.querySelector('.card-body');
+    if (!body) return;
+
+    const launcher = document.createElement('div');
+    launcher.className = 'mt-3 pt-3 border-top';
+    launcher.innerHTML = `
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <span class="fw-semibold"><i class="bi bi-hdd-network me-1"></i>SearXNG Server</span>
+                <div class="field-desc">Start/stop the local SearXNG meta-search engine</div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span id="searxngStatus" class="badge bg-secondary">Checking...</span>
+                <button class="btn btn-sm btn-success" id="btnSearxngStart" onclick="searxngStart()" disabled>
+                    <i class="bi bi-play-fill me-1"></i>Start
+                </button>
+                <button class="btn btn-sm btn-danger" id="btnSearxngStop" onclick="searxngStop()" style="display:none">
+                    <i class="bi bi-stop-fill me-1"></i>Stop
+                </button>
+            </div>
+        </div>`;
+    body.appendChild(launcher);
+    await checkSearxngStatus();
+}
+
+async function checkSearxngStatus() {
+    try {
+        const res = await fetch('/api/searxng/status');
+        const data = await res.json();
+        const badge = document.getElementById('searxngStatus');
+        const btnStart = document.getElementById('btnSearxngStart');
+        const btnStop = document.getElementById('btnSearxngStop');
+        if (!badge) return;
+
+        if (data.running) {
+            badge.textContent = 'Running';
+            badge.className = 'badge bg-success';
+            btnStart.style.display = 'none';
+            btnStop.style.display = '';
+            btnStop.disabled = false;
+        } else {
+            badge.textContent = 'Stopped';
+            badge.className = 'badge bg-secondary';
+            btnStart.style.display = '';
+            btnStart.disabled = false;
+            btnStop.style.display = 'none';
+        }
+    } catch(e) { /* ignore */ }
+}
+
+async function searxngStart() {
+    const btn = document.getElementById('btnSearxngStart');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Starting...';
+    try {
+        const res = await fetch('/api/searxng/start', { method: 'POST' });
+        const data = await res.json();
+        showToast(data.message, res.ok ? 'success' : 'danger');
+        await checkSearxngStatus();
+    } catch(e) { showToast('Error: ' + e.message, 'danger'); }
+    btn.innerHTML = '<i class="bi bi-play-fill me-1"></i>Start';
+    btn.disabled = false;
+}
+
+async function searxngStop() {
+    const btn = document.getElementById('btnSearxngStop');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Stopping...';
+    try {
+        const res = await fetch('/api/searxng/stop', { method: 'POST' });
+        const data = await res.json();
+        showToast(data.message, res.ok ? 'success' : 'danger');
+        await checkSearxngStatus();
+    } catch(e) { showToast('Error: ' + e.message, 'danger'); }
+    btn.innerHTML = '<i class="bi bi-stop-fill me-1"></i>Stop';
+    btn.disabled = false;
+}
+
+loadSettings();
+</script>

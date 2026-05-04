@@ -1,0 +1,12 @@
+## MANDATORY: Self-Validation Before Finishing
+
+After creating or modifying ALL files, you MUST validate your work before finishing:
+
+1. **Build the project** — run the appropriate command in the terminal:
+   - .NET project (has .csproj): `dotnet build <path-to-csproj> --nologo -v q`
+   - Node.js project (has package.json): `cd <site-dir> && npm install && npm run build` (if build script exists)
+   - Static HTML site: no build needed, skip this step
+2. **Fix any build errors** — if the build fails, read the error output, fix the code, and re-run until it succeeds
+3. **Quick scan** — grep your created files to make sure there are no `TODO`, `FIXME`, `your-api-key`, or placeholder values left
+
+Do NOT finish until the build passes. This is a hard requirement — code that doesn't build will be rejected.

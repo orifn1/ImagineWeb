@@ -1,0 +1,8 @@
+## Code Quality Rules — NON-NEGOTIABLE
+- Zero mocks, zero fake data, zero hardcoded stub responses
+- No TODO comments left in generated code
+- No placeholder values (e.g. "your-api-key", "FIXME", "example.com")
+- All external integrations must use real SDK calls or real REST endpoints
+- All environment variables must be declared in `.env.example` with descriptions, never with real values
+- Generated code must be runnable and deployable as-is after env vars are set
+- Use absolute file paths when creating or editing files

@@ -1,0 +1,61 @@
+## IaC Fix Rules (for deployment error fixes)
+
+When fixing deployment errors, you MAY edit azure.yaml and infra/*.bicep files.
+Follow these EXACT rules — azd deploy will fail if any are violated:
+
+### azure.yaml — CRITICAL RULES
+- `project: ./site` — always points to the site/ subfolder
+- `host:` must be one of: `staticwebapp`, `appservice`, `containerapp`, `function`
+- `dist:` is relative to `project:` — for Vite builds use `dist: dist` (resolves to `site/dist/`)
+  NEVER use `dist: ./site` (that resolves to `site/site/` which doesn't exist)
+- `language:` must match actual tech: `dotnet`/`csharp` for .NET, `js` for Node.js, `py` for Python
+  Do NOT set `language: html` — it's not supported. For static HTML sites, omit `language:` entirely
+- `shell: pwsh` in hooks — NEVER `shell: sh` (deployment runs on Windows)
+- For Static Web Apps: `dist:` MUST point to the folder containing the built index.html
+  If Vite is used, that's `dist` (the Vite output). If plain HTML, that's `.` (the project root)
+- NEVER add `resourceName:` property — it breaks azd tag-based resource lookup and causes deploy failures
+
+### Bicep — CRITICAL RULES
+- `infra/main.bicep` MUST start with `targetScope = 'subscription'`
+- Resource group MUST have tag: `'azd-env-name': environmentName`
+- The service resource (App Service, SWA, Container App, Function App) MUST have tag: `'azd-service-name': 'web'`
+  This tag MUST match the service name in azure.yaml (the key under `services:`)
+  Without this tag, azd CANNOT find the resource and deploy will fail with:
+  "unable to find a resource tagged with 'azd-service-name: web'"
+- `infra/main.bicepparam` MUST exist with:
+  ```
+  using './main.bicep'
+  param environmentName = readEnvironmentVariable('AZURE_ENV_NAME', 'dev')
+  param location = readEnvironmentVariable('AZURE_LOCATION', 'eastus2')
+  ```
+- Use free tier SKUs: F1 for App Service, Free for SWA, Y1/Dynamic for Functions
+- Use `SystemAssigned` managed identity for service-to-service auth
+- NEVER create `infra/main.json` — azd uses `main.bicep` + `main.bicepparam` directly.
+  A compiled ARM template will cause deployment failures.
+
+### Build / runtime alignment — CRITICAL RULES (preventing runtime drift)
+- Node engine: every package referenced in `site/package.json` (and any `site/api/package.json`) MUST be
+  compatible with the runtime declared in `staticwebapp.config.json` (`platform.apiRuntime`) and in any
+  `linuxFxVersion` set in Bicep. If a dependency requires `node>=20`, do NOT pin runtime to `node:18`.
+  When in doubt, prefer `node:20` (or `node:22`) and update both `staticwebapp.config.json` and
+  `linuxFxVersion`/`functionAppConfig` accordingly.
+- Build output ownership: NEVER duplicate compiled assets across `site/`, `site/public/`, `site/dist/`.
+  For Vite: source goes in `site/src`; only `site/index.html` and `site/public/*` are inputs;
+  `site/dist/*` is the build output. Do NOT commit anything into `site/dist`.
+- HTML asset references: source `site/index.html` MUST reference Vite source entry points
+  (e.g. `<script type="module" src="/src/main.tsx"></script>`), NEVER hashed `/assets/index-*.js`
+  bundles — those only exist in the built `dist/` output and break dev / re-builds.
+- Static config duplication: `staticwebapp.config.json`, `robots.txt`, `sitemap.xml` should live in ONE
+  canonical location (typically `site/public/` for Vite or `site/` for plain HTML). Multiple copies cause
+  drift; the Static Web App build only takes the one inside the build output.
+
+### Common deployment errors and fixes
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `unable to find a resource tagged with 'azd-service-name: web'` | Bicep resource missing the tag | Add `'azd-service-name': 'web'` to the service resource tags |
+| `WaitingForDeployment state` | dist folder empty or wrong path | Verify `dist:` in azure.yaml points to folder with built index.html |
+| `language: html is not supported` | Invalid language value | Remove `language:` line for static sites |
+| `dist resolves to site/site` | `dist: ./site` with `project: ./site` | Change to `dist: .` or `dist: dist` |
+| `ENOENT package.json` | `language: js` but no package.json in site/ | Remove `language:` line or add package.json |
+| `engine "node" is incompatible` | Dependency requires node>=20 but runtime pinned to node:18 | Bump apiRuntime + linuxFxVersion to node:20 |
+| `404 on hashed /assets/index-*.js` | Source HTML references built asset names | Replace with Vite source entry `<script type="module" src="/src/main.tsx">` |

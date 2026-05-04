@@ -1,0 +1,2467 @@
+<div class="page-header">
+    <h1><i class="bi bi-funnel me-2"></i>Clarify &amp; Build</h1>
+    <p>Unified pipeline — feed a Hunter finding or a new Idea, clarify with AI, then generate production code</p>
+</div>
+
+<!-- Progress Stepper -->
+<div class="stepper-bar mb-4" id="stepperBar">
+    <div class="stepper-step active" id="stepper-source">
+        <div class="stepper-dot"><i class="bi bi-pencil-square"></i></div>
+        <span class="stepper-label">Source</span>
+    </div>
+    <div class="stepper-line" id="stepper-line-1"></div>
+    <div class="stepper-step" id="stepper-clarify">
+        <div class="stepper-dot"><i class="bi bi-chat-dots"></i></div>
+        <span class="stepper-label">Clarify</span>
+    </div>
+    <div class="stepper-line" id="stepper-line-2"></div>
+    <div class="stepper-step" id="stepper-generate">
+        <div class="stepper-dot"><i class="bi bi-code-slash"></i></div>
+        <span class="stepper-label">Generate</span>
+    </div>
+    <div class="stepper-line" id="stepper-line-3"></div>
+    <div class="stepper-step" id="stepper-deploy">
+        <div class="stepper-dot"><i class="bi bi-rocket-takeoff"></i></div>
+        <span class="stepper-label">Deploy</span>
+    </div>
+</div>
+
+<!-- Archive Expiry Notifications -->
+<div id="archiveNotifications" class="mb-3"></div>
+
+<!-- Active Deployments -->
+<div id="deploymentsSection" class="mb-4 d-none">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center"
+             data-bs-toggle="collapse" data-bs-target="#deploymentsCollapse" style="cursor:pointer">
+            <span><i class="bi bi-rocket-takeoff me-2 text-success"></i><span class="fw-semibold">Active Deployments</span>
+            <span class="badge bg-secondary ms-2" id="deploymentsCount">0</span></span>
+            <i class="bi bi-chevron-down"></i>
+        </div>
+        <div id="deploymentsCollapse" class="collapse">
+            <div class="card-body p-2" id="deploymentsList"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Source Selection -->
+<div id="sourceSection">
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 id="sourceCardHeader"></h5>
+
+            <div>
+                <!-- Idea pane -->
+                <div id="pane-idea" class="d-none">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Title</label>
+                        <input type="text" id="ideaTitle" class="form-control" placeholder="e.g. Crypto Price Tracker"/>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label fw-semibold mb-0">Description</label>
+                            <button class="btn btn-outline-secondary btn-sm py-0" onclick="pasteIdeaFromClipboard()" title="Paste screenshot from clipboard">
+                                <i class="bi bi-clipboard me-1"></i>Paste
+                            </button>
+                        </div>
+                        <textarea id="ideaDescription" class="form-control" rows="3"
+                            placeholder="Describe what the app should do..."
+                            onpaste="handleIdeaAreaPaste(event)"></textarea>
+                        <div id="ideaClipboardPreview" class="d-none d-flex flex-wrap mt-2 p-2 border rounded bg-light"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold"><i class="bi bi-paperclip me-1"></i>Attachments <span class="text-muted fw-normal">(optional)</span></label>
+                        <input type="file" id="ideaAttachments" class="form-control form-control-sm"
+                            multiple accept="image/*,.txt,.md,.json,.html,.css,.js,.ts,.xml,.yaml,.yml"/>
+                        <div class="form-text">Add screenshots, design examples, or reference files to help clarify your idea.</div>
+                        <div id="ideaAttachmentsPreview" class="d-none d-flex flex-wrap mt-2 p-2 border rounded bg-light"></div>
+                    </div>
+
+                    <details class="mb-3" id="promptGuide">
+                        <summary class="small text-info fw-semibold" style="cursor:pointer;">
+                            <i class="bi bi-book"></i> How to write a great prompt
+                        </summary>
+                        <div class="card mt-2 border-info">
+                            <div class="card-body p-3">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="p-2 rounded" style="background: rgba(13,110,253,0.06); border-left: 3px solid #0d6efd;">
+                                            <div class="fw-bold small mb-1" style="color:#0d6efd;"><i class="bi bi-list-check me-1"></i>1. WHAT — List key sections</div>
+                                            <div class="small text-muted">Name the pages and features your site needs.</div>
+                                            <div class="mt-1 small"><span class="text-danger">&#10007;</span> <em>"Make a website"</em></div>
+                                            <div class="small"><span class="text-success">&#10003;</span> <em>"A portfolio site with Home, Projects, About, and Contact pages"</em></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="p-2 rounded" style="background: rgba(111,66,193,0.06); border-left: 3px solid #6f42c1;">
+                                            <div class="fw-bold small mb-1" style="color:#6f42c1;"><i class="bi bi-palette me-1"></i>2. FORMAT — Describe the result</div>
+                                            <div class="small text-muted">Specify layout style, framework, or tech preferences.</div>
+                                            <div class="mt-1 small"><span class="text-danger">&#10007;</span> <em>"Make it nice"</em></div>
+                                            <div class="small"><span class="text-success">&#10003;</span> <em>"Single-page app, dark theme, card-based layout"</em></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="p-2 rounded" style="background: rgba(25,135,84,0.06); border-left: 3px solid #198754;">
+                                            <div class="fw-bold small mb-1" style="color:#198754;"><i class="bi bi-people me-1"></i>3. CONTEXT — Who visits your site?</div>
+                                            <div class="small text-muted">Help the AI understand your audience and purpose.</div>
+                                            <div class="mt-1 small"><span class="text-danger">&#10007;</span> <em>"A business site"</em></div>
+                                            <div class="small"><span class="text-success">&#10003;</span> <em>"A SaaS landing page targeting small business owners"</em></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="p-2 rounded" style="background: rgba(255,193,7,0.08); border-left: 3px solid #ffc107;">
+                                            <div class="fw-bold small mb-1" style="color:#cc9a06;"><i class="bi bi-brush me-1"></i>4. VISUALS — Describe the look</div>
+                                            <div class="small text-muted">Mention colors, mood, images, animations.</div>
+                                            <div class="mt-1 small"><span class="text-danger">&#10007;</span> <em>"Good design"</em></div>
+                                            <div class="small"><span class="text-success">&#10003;</span> <em>"Minimalist, white + teal accent, large hero image, subtle scroll animations"</em></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="p-2 rounded" style="background: rgba(220,53,69,0.06); border-left: 3px solid #dc3545;">
+                                            <div class="fw-bold small mb-1" style="color:#dc3545;"><i class="bi bi-link-45deg me-1"></i>5. EXAMPLES — Point to references</div>
+                                            <div class="small text-muted">Share links or names of sites you like for inspiration.</div>
+                                            <div class="mt-1 small"><span class="text-danger">&#10007;</span> <em>"Something modern"</em></div>
+                                            <div class="small"><span class="text-success">&#10003;</span> <em>"Similar to stripe.com — clean layout with gradient hero"</em></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="p-2 rounded" style="background: rgba(108,117,125,0.06); border-left: 3px solid #6c757d;">
+                                            <div class="fw-bold small mb-1" style="color:#6c757d;"><i class="bi bi-slash-circle me-1"></i>6. LIMITS — What to avoid</div>
+                                            <div class="small text-muted">Explicitly exclude things you don't want.</div>
+                                            <div class="mt-1 small"><span class="text-danger">&#10007;</span> <em>(nothing)</em></div>
+                                            <div class="small"><span class="text-success">&#10003;</span> <em>"No stock photos, no carousels, no pop-ups"</em></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-2 small text-muted text-center">
+                                    <i class="bi bi-info-circle me-1"></i>You don't need all 6 — even 2-3 points dramatically improve results.
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+                <!-- Hunter pane -->
+                <div id="pane-hunter" class="d-none">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Hunter Page ID</label>
+                        <div class="input-group">
+                            <input type="number" id="hunterPageId" class="form-control" placeholder="Enter page ID from findings"/>
+                            <button class="btn btn-outline-secondary" onclick="loadHunterPage()">
+                                <i class="bi bi-download me-1"></i>Load
+                            </button>
+                        </div>
+                    </div>
+                    <div id="hunterPreview" class="d-none">
+                        <div class="alert alert-info small">
+                            <strong id="hunterTitle"></strong>
+                            <div id="hunterConcept" class="mt-1 fst-italic"></div>
+                            <div id="hunterAngle" class="mt-1"></div>
+                            <div id="hunterSummary" class="mt-1"></div>
+                            <div class="mt-1">
+                                <span class="badge bg-warning text-dark me-1" id="hunterInteresting"></span>
+                                <span class="badge bg-primary me-1" id="hunterScore"></span>
+                                <span class="badge bg-secondary" id="hunterType"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr/>
+
+            <!-- Provider + model selector available to all users (clarification phase) -->
+            <div id="clarifyProviderSelector"></div>
+
+            <!-- Model Selection for Clarification (admin only) -->
+            <div class="mb-3 admin-only-model-section" style="display:none">
+                <label class="form-label fw-semibold"><i class="bi bi-cpu me-1"></i>AI Model for Clarification</label>
+                <div class="row g-2">
+                    <div class="col-8">
+                        <select id="clarifyModelSelect" class="form-select form-select-sm">
+                            <option value="">Loading models...</option>
+                        </select>
+                    </div>
+                    <div class="col-4">
+                        <select id="clarifyReasoningSelect" class="form-select form-select-sm d-none" title="Reasoning effort for clarification">
+                        </select>
+                    </div>
+                </div>
+                <div class="form-text">Override model for clarification. Takes priority over Settings.</div>
+            </div>
+
+            <!-- Model Selection for Code Generation (admin only) -->
+            <div class="mb-3 admin-only-model-section" style="display:none">
+                <label class="form-label fw-semibold"><i class="bi bi-cpu me-1"></i>AI Model for Code Generation</label>
+                <div class="row g-2">
+                    <div class="col-8">
+                        <select id="codegenModelSelect" class="form-select form-select-sm">
+                            <option value="">Loading models...</option>
+                        </select>
+                    </div>
+                    <div class="col-4">
+                        <select id="codegenReasoningSelect" class="form-select form-select-sm d-none" title="Reasoning effort for code generation">
+                        </select>
+                    </div>
+                </div>
+                <div class="form-text">Override model for code generation. Takes priority over Settings.</div>
+            </div>
+
+            <!-- Model Selection for Auto Fix Errors (admin only) -->
+            <div class="mb-3 admin-only-model-section" style="display:none">
+                <label class="form-label fw-semibold"><i class="bi bi-cpu me-1"></i>AI Model for Auto Fix Errors</label>
+                <div class="row g-2">
+                    <div class="col-8">
+                        <select id="autofixModelSelect" class="form-select form-select-sm">
+                            <option value="">(same as codegen)</option>
+                        </select>
+                    </div>
+                    <div class="col-4">
+                        <select id="autofixReasoningSelect" class="form-select form-select-sm d-none" title="Reasoning effort for auto-fix">
+                        </select>
+                    </div>
+                </div>
+                <div class="form-text">Model used when auto-fix triggers on deploy failure. Falls back to codegen model if left as default.</div>
+            </div>
+
+            <button id="btnStartClarify" class="btn btn-primary btn-lg w-100" onclick="startClarification()"
+                data-bs-toggle="tooltip" title="AI will ask 3–5 clarifying questions to refine the spec before generating code">
+                <i class="bi bi-send me-1"></i>Start
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Clarification Section -->
+<div id="clarificationSection" class="d-none">
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-clipboard-check me-1"></i>AI Clarification</span>
+            <span id="clarifyStatusBadge" class="badge bg-info">Analyzing</span>
+        </div>
+        <div class="card-body">
+            <!-- Quality Warning -->
+            <div id="qualityWarning" class="d-none">
+                <div class="alert alert-warning d-flex align-items-start gap-2">
+                    <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+                    <div>
+                        <strong>Quality Notice</strong>
+                        <p id="qualityWarningText" class="mb-2 small"></p>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-warning" onclick="proceedAnyway()">
+                                <i class="bi bi-arrow-right me-1"></i>Proceed Anyway
+                            </button>
+                            <button class="btn btn-sm btn-primary" onclick="rerunPowerful()">
+                                <i class="bi bi-cloud me-1"></i>Re-run with Powerful Model
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary -->
+            <div id="clarificationSummary" class="mb-3">
+                <div class="p-3 bg-light rounded">
+                    <h6 class="mb-1"><i class="bi bi-robot me-1"></i>AI's Understanding</h6>
+                    <p id="summaryText" class="mb-1"></p>
+                    <span id="confidenceBadge" class="badge"></span>
+                </div>
+            </div>
+
+            <!-- Assumptions -->
+            <div id="assumptionsPanel" class="mb-3 d-none">
+                <h6 class="small fw-semibold"><i class="bi bi-lightbulb me-1"></i>Assumptions (if not answered)</h6>
+                <ul id="assumptionsList" class="small text-muted mb-0"></ul>
+            </div>
+
+            <!-- Questions Form -->
+            <div id="questionsForm" class="mb-3"></div>
+
+            <!-- Env Vars Collection -->
+            <div id="envVarsSection" class="d-none mb-3">
+                <h6 class="fw-semibold"><i class="bi bi-key me-1"></i>Required Environment Variables</h6>
+                <p class="small text-muted">Provide values for variables that need user input. Others will be auto-configured.</p>
+                <div id="envVarsList"></div>
+            </div>
+
+            <!-- Submit -->
+            <div id="submitSection" class="d-none">
+                <button class="btn btn-success btn-lg w-100" onclick="submitAnswers()">
+                    <i class="bi bi-rocket-takeoff me-1"></i>Submit &amp; Generate Code
+                </button>
+            </div>
+
+            <!-- Clarification Premium Requests -->
+            <div id="clarifyPremiumSection" class="mt-2" style="display:none">
+                <div class="d-flex align-items-center gap-1 cursor-pointer" onclick="this.parentElement.querySelector('.clarify-pr-body').classList.toggle('d-none');this.querySelector('.bi').classList.toggle('bi-chevron-right');this.querySelector('.bi').classList.toggle('bi-chevron-down')">
+                    <i class="bi bi-chevron-right small"></i>
+                    <span class="small text-muted"><i class="bi bi-activity me-1"></i>Copilot SDK Requests</span>
+                    <span id="clarifyPremiumBadge" class="badge bg-secondary ms-1" style="font-size:.65rem">0</span>
+                </div>
+                <div class="clarify-pr-body d-none">
+                    <div id="clarifyPremiumModel" class="small text-muted mt-1"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Generation Pipeline -->
+<div id="genPipeline" class="d-none mb-4">
+    <div class="card">
+        <div class="card-body">
+            <h5 class="mb-3"><i class="bi bi-gear-wide-connected me-2 text-primary"></i>Generating Code</h5>
+            <div class="pipeline-steps">
+                <div class="pipeline-step done" id="gstep-clarify">
+                    <div class="step-icon"><i class="bi bi-clipboard-check"></i></div>
+                    <div class="step-body">
+                        <strong>Clarification</strong>
+                        <div class="small text-muted">Spec finalized with user answers</div>
+                    </div>
+                    <span class="step-status"><i class="bi bi-check-circle-fill text-success"></i></span>
+                </div>
+                <div class="pipeline-step active" id="gstep-codegen">
+                    <div class="step-icon"><i class="bi bi-code-slash"></i></div>
+                    <div class="step-body">
+                        <strong>Code Generation</strong>
+                        <div class="small text-muted">Copilot SDK generating production code</div>
+                    </div>
+                    <span class="step-status"><span class="spinner-border spinner-border-sm text-primary"></span></span>
+                </div>
+                <div class="pipeline-step text-muted" id="gstep-done">
+                    <div class="step-icon"><i class="bi bi-check2-all"></i></div>
+                    <div class="step-body">
+                        <strong>Complete</strong>
+                        <div class="small">All files generated &amp; ready</div>
+                    </div>
+                    <span class="step-status"></span>
+                </div>
+            </div>
+            <div id="genPipelineStatus" class="small text-muted text-center mt-3 d-none"></div>
+            <div id="genLogPanel" class="d-none mt-3">
+                <div class="log-panel-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-terminal me-1"></i>Live Output</span>
+                    <button class="btn btn-link btn-sm p-0 text-muted" onclick="document.getElementById('genLogContent').textContent=''">Clear</button>
+                </div>
+                <pre id="genLogContent" class="log-panel-content"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Result / Deploy Section -->
+<div id="resultSection" class="d-none">
+    <div class="card mb-4 border-success">
+        <div class="card-header d-flex justify-content-between align-items-center bg-success text-white">
+            <span><i class="bi bi-check-circle me-1"></i>Code Generation Complete</span>
+            <span id="clarifyDeployBadge" class="badge bg-warning">Ready to Deploy</span>
+        </div>
+        <div class="card-body">
+            <div class="mb-2 d-flex flex-wrap gap-2 align-items-center small text-muted" id="sessionTimingRow" style="display:none!important">
+                <span id="sessionCreatedAt"></span>
+                <span id="sessionTimingBadges"></span>
+            </div>
+            <div class="mb-3 small">
+                <strong>Solution path:</strong> <code id="resultSolutionPath"></code>
+            </div>
+            <div class="row g-2 mb-3">
+                <div class="col-auto">
+                    <span class="badge bg-light text-dark border"><i class="bi bi-file-earmark-code me-1"></i>Application Code</span>
+                </div>
+                <div class="col-auto">
+                    <span class="badge bg-light text-dark border"><i class="bi bi-cloud me-1"></i>infra/*.bicep</span>
+                </div>
+                <div class="col-auto">
+                    <span class="badge bg-light text-dark border"><i class="bi bi-file-text me-1"></i>azure.yaml</span>
+                </div>
+                <div class="col-auto">
+                    <span class="badge bg-light text-dark border"><i class="bi bi-key me-1"></i>.env.example</span>
+                </div>
+            </div>
+
+            <!-- User Prompt (collapsed by default) -->
+            <div class="mb-3" id="userPromptSection" style="display:none">
+                <div class="d-flex align-items-center gap-1 mb-1 cursor-pointer" onclick="this.parentElement.querySelector('.prompt-body').classList.toggle('d-none');this.querySelector('.bi').classList.toggle('bi-chevron-right');this.querySelector('.bi').classList.toggle('bi-chevron-down')">
+                    <i class="bi bi-chevron-right small"></i>
+                    <span class="small fw-semibold text-muted"><i class="bi bi-chat-left-text me-1"></i>User Prompt</span>
+                </div>
+                <div class="prompt-body d-none">
+                    <div id="userPromptContent" class="small p-2 border rounded bg-light" style="white-space:pre-wrap;max-height:200px;overflow:auto;font-size:.8rem"></div>
+                </div>
+            </div>
+
+            <!-- Premium Requests (collapsed by default) -->
+            <div class="mb-3" id="premiumRequestsSection" style="display:none">
+                <div class="d-flex align-items-center gap-1 mb-1 cursor-pointer" onclick="this.parentElement.querySelector('.premium-body').classList.toggle('d-none');this.querySelector('.bi').classList.toggle('bi-chevron-right');this.querySelector('.bi').classList.toggle('bi-chevron-down')">
+                    <i class="bi bi-chevron-right small"></i>
+                    <span class="small fw-semibold text-muted"><i class="bi bi-activity me-1"></i>Premium Requests</span>
+                    <span id="premiumBadge" class="badge bg-secondary ms-1" style="font-size:.65rem">0</span>
+                </div>
+                <div class="premium-body d-none">
+                    <div id="premiumRequestsList"></div>
+                </div>
+            </div>
+
+            <!-- Fix History (admin only) -->
+            <div class="mb-3" id="fixHistorySection" style="display:none">
+                <div class="d-flex align-items-center gap-1 mb-1 cursor-pointer" onclick="this.parentElement.querySelector('.fix-history-body').classList.toggle('d-none');this.querySelector('.bi').classList.toggle('bi-chevron-right');this.querySelector('.bi').classList.toggle('bi-chevron-down')">
+                    <i class="bi bi-chevron-right small"></i>
+                    <span class="small fw-semibold text-muted"><i class="bi bi-bug me-1"></i>Fix History</span>
+                    <span id="fixHistoryBadge" class="badge bg-warning text-dark ms-1" style="font-size:.65rem">0</span>
+                </div>
+                <div class="fix-history-body d-none">
+                    <div id="fixHistoryList"></div>
+                </div>
+            </div>
+
+
+
+            <ul class="nav nav-tabs" id="clarifyResultTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="tab-deployment-btn" data-bs-toggle="tab" data-bs-target="#tab-deployment" type="button" role="tab">
+                        <i class="bi bi-cloud me-1"></i>Deployment
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-improve-btn" data-bs-toggle="tab" data-bs-target="#tab-improve" type="button" role="tab">
+                        <i class="bi bi-wrench me-1"></i>Fix &amp; Improve
+                    </button>
+                </li>
+            </ul>
+            <div class="tab-content border border-top-0 rounded-bottom p-3">
+                <div class="tab-pane fade show active" id="tab-deployment" role="tabpanel">
+                    <div id="clarifyTornDownInfo" class="d-none">
+                        <div class="alert alert-secondary py-2 mb-2 small">
+                            <i class="bi bi-cloud-slash me-1"></i>Previously deployed — torn down. You can redeploy below.
+                        </div>
+                    </div>
+
+                    <div id="clarifyDeployButtons" class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-primary btn-sm" onclick="clarifyDeployAzure()">
+                            <i class="bi bi-cloud me-1"></i>Deploy to Azure
+                        </button>
+                    </div>
+
+                    <div id="clarifyDeployedInfo" class="d-none">
+                        <div class="alert alert-success mb-2">
+                            <i class="bi bi-check-circle me-1"></i>Deployed!
+                            <a id="clarifyDeployedLink" href="#" target="_blank" class="ms-2"></a>
+                        </div>
+                    <div class="mb-2 small" id="clarifyResourceGroupRow">
+                            <strong>Resource group:</strong> <code id="clarifyResourceGroup"></code>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary btn-sm" onclick="clarifyDeployAzure()">
+                                <i class="bi bi-cloud me-1"></i>Redeploy
+                            </button>
+                            <button class="btn btn-outline-warning btn-sm" onclick="clarifyTeardown()">
+                                <i class="bi bi-arrow-down-circle me-1"></i>Teardown
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="clarifyDeployError" class="d-none">
+                        <div class="alert alert-danger mb-2">
+                            <i class="bi bi-exclamation-triangle me-1"></i><strong>Deployment failed</strong>
+                            <pre id="clarifyDeployErrorText" class="mt-2 mb-0 small" style="white-space:pre-wrap;max-height:200px;overflow:auto"></pre>
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button class="btn btn-primary btn-sm" onclick="clarifyDeployAzure()">
+                                <i class="bi bi-arrow-clockwise me-1"></i>Retry Deploy
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-improve-btn')).show()">
+                                <i class="bi bi-wrench me-1"></i>Fix with AI
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="tab-improve" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label fw-semibold mb-0"><i class="bi bi-wrench me-1"></i>Fix or improve this site</label>
+                        <button class="btn btn-outline-secondary btn-sm py-0" onclick="pasteFromClipboard()" title="Paste from clipboard">
+                            <i class="bi bi-clipboard me-1"></i>Paste
+                        </button>
+                    </div>
+                    <textarea id="improveInstruction" class="form-control form-control-sm mb-2" rows="3"
+                        placeholder="Describe what to fix or improve, e.g. 'Fix the azure.yaml project path' or 'Add a loading spinner'"
+                        onpaste="handleImproveAreaPaste(event)"></textarea>
+                    <div id="clipboardImagesPreview" class="d-none d-flex flex-wrap mb-2 p-2 border rounded bg-light"></div>
+                    <div class="mb-2">
+                        <label class="form-label small text-muted mb-1"><i class="bi bi-paperclip me-1"></i>Attach files for context <span class="fw-normal">(optional)</span></label>
+                        <input type="file" id="improveAttachments" class="form-control form-control-sm"
+                            multiple accept="image/*,.txt,.md,.json,.html,.css,.js,.ts,.xml,.yaml,.yml"/>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small text-muted mb-1"><i class="bi bi-cpu me-1"></i>Model &amp; Reasoning</label>
+                        <div class="row g-2">
+                            <div class="col-8">
+                                <select id="improveModelSelect" class="form-select form-select-sm">
+                                    <option value="">(use default)</option>
+                                </select>
+                            </div>
+                            <div class="col-4">
+                                <select id="improveReasoningSelect" class="form-select form-select-sm d-none" title="Reasoning effort for fix/improve">
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm" onclick="clarifyImprove()">
+                        <i class="bi bi-arrow-repeat me-1"></i>Fix &amp; Rebuild
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer d-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm" onclick="resetClarify()">
+                <i class="bi bi-plus-circle me-1"></i>New Specification
+            </button>
+            <button class="btn btn-outline-danger btn-sm" onclick="deleteClarifySession()">
+                <i class="bi bi-trash me-1"></i>Delete
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="clarifyLoading" class="d-none text-center my-4">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="text-muted mt-2" id="clarifyLoadingText">AI is analyzing...</p>
+</div>
+
+<style>
+    .model-card {
+        border: 2px solid var(--at-card-border, #dee2e6); border-radius: var(--at-radius-sm, .5rem); padding: .75rem 1rem;
+        cursor: pointer; transition: border-color .15s, background .15s;
+    }
+    .model-card:has(input:checked) {
+        border-color: var(--at-accent, #0d6efd); background: var(--at-accent-soft, #e7f1ff);
+    }
+    .model-card:hover { border-color: var(--at-accent, #0d6efd); }
+    .model-card input { margin-right: .5rem; }
+    .stepper-bar { display: flex; align-items: center; justify-content: center; gap: 0; padding: .5rem 0; }
+    .stepper-step { display: flex; flex-direction: column; align-items: center; gap: .25rem; flex-shrink: 0; }
+    .stepper-dot { width: 2.25rem; height: 2.25rem; border-radius: 50%; border: 2px solid var(--at-card-border, #dee2e6); background: var(--bs-body-bg, #fff); display: flex; align-items: center; justify-content: center; font-size: .85rem; color: #adb5bd; transition: all var(--at-transition, .2s); }
+    .stepper-label { font-size: .7rem; color: #adb5bd; font-weight: 500; transition: color var(--at-transition, .2s); }
+    .stepper-line { flex: 1; height: 2px; background: var(--at-card-border, #dee2e6); margin: 0 .5rem; margin-bottom: 1.1rem; transition: background var(--at-transition, .2s); max-width: 80px; }
+    .stepper-step.active .stepper-dot { border-color: var(--at-accent, #0d6efd); background: var(--at-accent-soft, #e7f1ff); color: var(--at-accent, #0d6efd); }
+    .stepper-step.active .stepper-label { color: var(--at-accent, #0d6efd); font-weight: 600; }
+    .stepper-step.done .stepper-dot { border-color: #198754; background: #d1e7dd; color: #198754; }
+    .stepper-step.done .stepper-label { color: #198754; }
+    .stepper-line.done { background: #198754; }
+    .q-card-clarify {
+        background: var(--bs-body-bg, #fff); border: 1px solid var(--at-card-border, #dee2e6); border-radius: var(--at-radius-sm, .5rem);
+        padding: 1rem; margin-bottom: .75rem;
+    }
+    .q-card-clarify h6 { font-size: .9rem; margin-bottom: .25rem; }
+    .q-card-clarify .q-reason { font-size: .75rem; color: #6c757d; margin-bottom: .5rem; }
+    .q-option-clarify { display: flex; align-items: center; gap: .5rem; padding: .25rem 0; }
+    .q-option-clarify label { cursor: pointer; font-size: .875rem; margin: 0; }
+    .env-var-card {
+        background: #f8f9fa; border: 1px solid #dee2e6; border-radius: .5rem;
+        padding: .75rem; margin-bottom: .5rem;
+    }
+    .env-var-card .env-key { font-family: 'Cascadia Code', Consolas, monospace; font-weight: 600; font-size: .85rem; }
+    .env-var-card .env-desc { font-size: .8rem; color: #6c757d; }
+    .env-var-card .env-source { font-size: .7rem; }
+    .cursor-pointer { cursor: pointer; }
+    .premium-request-item { border: 1px solid var(--at-card-border, #dee2e6); border-radius: .375rem; margin-bottom: .375rem; font-size: .8rem; }
+    .premium-request-item .pr-header { padding: .375rem .5rem; cursor: pointer; display: flex; align-items: center; gap: .5rem; }
+    .premium-request-item .pr-header:hover { background: var(--bs-tertiary-bg, #f8f9fa); }
+    .premium-request-item .pr-detail { padding: .25rem .5rem .375rem; border-top: 1px solid var(--at-card-border, #dee2e6); display: none; }
+    .premium-request-item.open .pr-detail { display: block; }
+    .premium-request-item.open .pr-header .bi-chevron-right { transform: rotate(90deg); }
+    .session-card-clarify { cursor: pointer; transition: box-shadow 0.2s, transform 0.2s; border: 1px solid #e0e0e0; }
+    .session-card-clarify:hover { box-shadow: 0 4px 12px rgba(0,0,0,.1); transform: translateY(-2px); }
+    .pipeline-steps { display: flex; flex-direction: column; gap: .75rem; }
+    .pipeline-step { display: flex; align-items: center; gap: .75rem; padding: .75rem; border-radius: .5rem; border: 1px solid #dee2e6; }
+    .pipeline-step.active { border-color: #0d6efd; background: #e7f1ff; }
+    .pipeline-step.done { border-color: #198754; background: #d1e7dd; }
+    .step-icon { font-size: 1.25rem; width: 2rem; text-align: center; }
+    .step-body { flex: 1; }
+    .step-status { width: 1.5rem; text-align: center; }
+    .log-panel-header { font-size: .8rem; font-weight: 600; padding: .4rem .75rem; background: #1e1e1e; color: #ccc; border-radius: .5rem .5rem 0 0; }
+    .log-panel-content { background: #1e1e1e; color: #d4d4d4; font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; font-size: .75rem; padding: .75rem; margin: 0; max-height: 30vh; overflow-y: auto; border-radius: 0 0 .5rem .5rem; white-space: pre-wrap; word-break: break-word; }
+</style>
+
+<script>
+(function() {
+    const source = window.clarifySource || 'idea';
+    const isIdea = source === 'idea';
+    const h1 = document.querySelector('.page-header h1');
+    if (h1) h1.innerHTML = isIdea
+        ? '<i class="bi bi-lightbulb me-2"></i>Build from Idea'
+        : '<i class="bi bi-crosshair me-2"></i>Build from Hunter';
+    const p = document.querySelector('.page-header p');
+    if (p) p.textContent = isIdea
+        ? 'Describe a fresh app idea — clarify with AI, then generate production code'
+        : 'Use a Hunter pipeline finding as the spec — clarify with AI, then generate production code';
+    const ch = document.getElementById('sourceCardHeader');
+    if (ch) ch.innerHTML = isIdea
+        ? '<i class="bi bi-lightbulb me-2 text-primary"></i>Idea Details'
+        : '<i class="bi bi-crosshair me-2 text-primary"></i>Hunter Finding';
+    document.getElementById(isIdea ? 'pane-idea' : 'pane-hunter').classList.remove('d-none');
+})();
+
+const __isAdmin = window.__aitk_isAdmin || false;
+let clarifySessionId = null;
+let clarifyDeployPollInterval = null;
+let clarifyPremiumRequests = [];
+
+function startDeployPolling() {
+    stopDeployPolling();
+    clarifyDeployPollInterval = setInterval(async () => {
+        try {
+            const res = await fetch(`/api/clarify/${clarifySessionId}`);
+            if (!res.ok) return;
+            const session = await res.json();
+            showClarifyDeploySection(session);
+            if (session.status === 'Deployed') {
+                stopDeployPolling();
+                showToast('Deployed to Azure!', 'success');
+            } else if (session.status === 'DeployFailed') {
+                stopDeployPolling();
+                showToast('Deploy failed: ' + (session.lastDeployError || 'Unknown error'), 'danger');
+            }
+        } catch { /* ignore */ }
+    }, 3000);
+}
+
+function stopDeployPolling() {
+    if (clarifyDeployPollInterval) {
+        clearInterval(clarifyDeployPollInterval);
+        clarifyDeployPollInterval = null;
+    }
+}
+let clarifyEventSource = null;
+let clipboardImages = [];
+let clipboardIdeaImages = [];
+let currentClarification = null;
+let warningDismissed = false;
+let clarifyReconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 10;
+let _statusPollInterval = null;
+
+window.addEventListener('beforeunload', () => {
+    if (clarifyEventSource) { clarifyEventSource.close(); clarifyEventSource = null; }
+    stopStatusPoll();
+});
+
+// When the page becomes visible again (e.g. screen wake, tab switch),
+// check if we have an active generation that lost its SSE connection and reconnect.
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible' || !clarifySessionId) return;
+    // If SSE is already connected, nothing to do
+    if (clarifyEventSource && clarifyEventSource.readyState !== EventSource.CLOSED) return;
+
+    (async () => {
+        try {
+            const res = await fetch(`/api/clarify/${clarifySessionId}`);
+            if (!res.ok) return;
+            const session = await res.json();
+            if (session.status === 'Generating' || session.status === 'Improving') {
+                // Reset reconnect counter — this is a fresh wake, not a consecutive failure
+                clarifyReconnectAttempts = 0;
+                appendGenLog('[RECONNECTING] Page became visible, reconnecting...', '#ce9178');
+                connectClarifyStream();
+            } else if (session.status === 'GenerationComplete') {
+                completeClarifyPipeline();
+            } else if (session.status === 'Deployed' || session.status === 'DeployFailed' || session.status === 'TornDown') {
+                showClarifyDeploySection(session);
+            } else if (session.status === 'Deploying') {
+                showClarifyDeploySection(session);
+                startDeployPolling();
+            } else if (session.status === 'Failed') {
+                failClarifyPipelineWithSession(session);
+            }
+        } catch { /* ignore — network may still be waking up */ }
+    })();
+});
+
+function startStatusPoll() {
+    stopStatusPoll();
+    _statusPollInterval = setInterval(async () => {
+        if (!clarifySessionId) { stopStatusPoll(); return; }
+        // Only poll if SSE is disconnected
+        if (clarifyEventSource && clarifyEventSource.readyState !== EventSource.CLOSED) return;
+        try {
+            const res = await fetch(`/api/clarify/${clarifySessionId}`);
+            if (!res.ok) return;
+            const session = await res.json();
+            if (session.status === 'GenerationComplete') {
+                stopStatusPoll();
+                completeClarifyPipeline();
+            } else if (session.status === 'Deployed' || session.status === 'DeployFailed' || session.status === 'TornDown') {
+                stopStatusPoll();
+                showClarifyDeploySection(session);
+            } else if (session.status === 'Failed') {
+                stopStatusPoll();
+                failClarifyPipeline();
+            } else if (session.status === 'Deploying') {
+                stopStatusPoll();
+                showClarifyDeploySection(session);
+                startDeployPolling();
+            } else if (session.status === 'Generating' || session.status === 'Improving') {
+                // SSE is dead but generation is running — try to reconnect
+                if (!clarifyEventSource || clarifyEventSource.readyState === EventSource.CLOSED) {
+                    clarifyReconnectAttempts = 0;
+                    connectClarifyStream();
+                }
+            }
+        } catch { /* ignore */ }
+    }, 10000);
+}
+
+function stopStatusPoll() {
+    if (_statusPollInterval) { clearInterval(_statusPollInterval); _statusPollInterval = null; }
+}
+
+function saveClarifyActiveSession() {
+    if (clarifySessionId) sessionStorage.setItem('clarify_active_session', clarifySessionId);
+}
+function clearClarifyActiveSession() {
+    sessionStorage.removeItem('clarify_active_session');
+}
+
+function showClarifyLoading(show, text) {
+    document.getElementById('clarifyLoading').classList.toggle('d-none', !show);
+    if (text) document.getElementById('clarifyLoadingText').textContent = text;
+}
+
+function hideAllClarify() {
+    ['sourceSection', 'clarificationSection', 'genPipeline', 'resultSection'].forEach(id =>
+        document.getElementById(id).classList.add('d-none'));
+}
+
+function updateStepper(activeStep) {
+    const steps = ['source', 'clarify', 'generate', 'deploy'];
+    const idx = steps.indexOf(activeStep);
+    steps.forEach((s, i) => {
+        const el = document.getElementById('stepper-' + s);
+        el.classList.remove('active', 'done');
+        if (i < idx) el.classList.add('done');
+        else if (i === idx) el.classList.add('active');
+    });
+    for (let i = 1; i <= 3; i++) {
+        const line = document.getElementById('stepper-line-' + i);
+        if (line) { line.classList.toggle('done', i <= idx); }
+    }
+}
+
+function getSelectedModel() {
+    return 'Powerful';
+}
+
+// Per-flow provider/model selector instances. Initialised on page load.
+let _clarifyProviderUI = null;
+let _codegenProviderUI = null;
+var _allModelsData = [];
+
+function getClarifyProvider() { return _clarifyProviderUI ? _clarifyProviderUI.getProvider() : null; }
+function getClarifyModelOverride() { return _clarifyProviderUI ? _clarifyProviderUI.getModel() : null; }
+function getCodegenProvider() { return _codegenProviderUI ? _codegenProviderUI.getProvider() : null; }
+function getCodegenModelOverride() { return _codegenProviderUI ? _codegenProviderUI.getModel() : null; }
+
+function getSelectedClarifyModelId() {
+    var sel = document.getElementById('clarifyModelSelect');
+    return (sel && sel.value) || getClarifyModelOverride();
+}
+
+function getSelectedCodegenModelId() {
+    var sel = document.getElementById('codegenModelSelect');
+    return (sel && sel.value) || getCodegenModelOverride();
+}
+
+function getCodegenReasoning() {
+    var sel = document.getElementById('codegenReasoningSelect');
+    return (sel && sel.value) ? sel.value : (_clarifyProviderUI ? _clarifyProviderUI.getReasoning() : null);
+}
+
+function getImproveModelId() {
+    var sel = document.getElementById('improveModelSelect');
+    return (sel && sel.value) || getSelectedCodegenModelId();
+}
+
+function getImproveReasoning() {
+    var sel = document.getElementById('improveReasoningSelect');
+    return (sel && sel.value) ? sel.value : null;
+}
+
+function getAutofixModelId() {
+    var sel = document.getElementById('autofixModelSelect');
+    return (sel && sel.value) || getSelectedCodegenModelId();
+}
+
+function getAutofixReasoning() {
+    var sel = document.getElementById('autofixReasoningSelect');
+    return (sel && sel.value) ? sel.value : null;
+}
+
+function updateReasoningForModelSelect(modelSelect, reasoningSelect) {
+    if (!modelSelect || !reasoningSelect) return;
+    var val = modelSelect.value;
+    if (!val || typeof _allModelsData === 'undefined' || !_allModelsData.length) {
+        reasoningSelect.innerHTML = '';
+        reasoningSelect.classList.add('d-none');
+        return;
+    }
+    // Resolve model from _allModelsData
+    var model = _allModelsData.find(m => {
+        if (m.provider === 'copilot') return m.id === val;
+        return (m.provider + ':' + m.id) === val;
+    });
+    var levels = (model && model.reasoningLevels && model.reasoningLevels.length > 0) ? model.reasoningLevels : null;
+    if (!levels) {
+        reasoningSelect.innerHTML = '';
+        reasoningSelect.classList.add('d-none');
+        return;
+    }
+    reasoningSelect.classList.remove('d-none');
+    var prev = reasoningSelect.value;
+    reasoningSelect.innerHTML = levels.map(l => '<option value="' + l + '">' + l.charAt(0).toUpperCase() + l.slice(1) + '</option>').join('');
+    if (prev && levels.includes(prev)) reasoningSelect.value = prev;
+    else reasoningSelect.value = levels.includes('high') ? 'high' : levels[levels.length - 1];
+}
+
+function escapeHtmlC(text) {
+    const el = document.createElement('div');
+    el.textContent = text;
+    return el.innerHTML;
+}
+
+async function loadHunterPage() {
+    const pageId = document.getElementById('hunterPageId').value;
+    if (!pageId) return;
+
+    try {
+        const res = await fetch(`/api/hunter/findings`);
+        const findings = await res.json();
+        const page = findings.find(f => f.id === parseInt(pageId));
+        if (!page) { showToast('Page not found in findings', 'danger'); return; }
+
+        document.getElementById('hunterTitle').textContent = page.title || page.url;
+        document.getElementById('hunterConcept').textContent = page.siteConcept ? `Concept: ${page.siteConcept}` : '';
+        document.getElementById('hunterAngle').textContent = page.uniqueAngle ? `Angle: ${page.uniqueAngle}` : '';
+        document.getElementById('hunterSummary').textContent = page.aiSummary || '';
+        const interesting = page.interestingnessScore || 0;
+        document.getElementById('hunterInteresting').textContent = `Interesting: ${interesting}/10`;
+        document.getElementById('hunterScore').textContent = `Profit: ${page.profitScore}/10`;
+        document.getElementById('hunterType').textContent = page.opportunityType || 'Unknown';
+        document.getElementById('hunterPreview').classList.remove('d-none');
+
+        document.getElementById('hunterPreview').dataset.page = JSON.stringify(page);
+    } catch(e) { showToast('Error loading finding: ' + e.message, 'danger'); }
+}
+
+function buildInputFromIdea() {
+    const title = document.getElementById('ideaTitle').value.trim();
+    const description = document.getElementById('ideaDescription').value.trim();
+    if (!title || !description) {
+        showToast('Title and Description are required', 'warning');
+        return null;
+    }
+    return {
+        sourceType: 'Idea',
+        draft: {
+            title: title,
+            description: description,
+            targetAudience: null,
+            monetizationHint: null,
+            keyFacts: [],
+            metadata: {}
+        }
+    };
+}
+
+function buildInputFromHunter() {
+    const preview = document.getElementById('hunterPreview');
+    if (preview.classList.contains('d-none')) {
+        showToast('Load a Hunter finding first', 'warning');
+        return null;
+    }
+    const page = JSON.parse(preview.dataset.page);
+    return {
+        sourceType: 'Hunter',
+        draft: {
+            title: page.title || `Opportunity from ${page.domain}`,
+            description: [page.siteConcept, page.uniqueAngle, page.aiSummary, page.aiRecommendation]
+                .filter(Boolean).join('\n\n') || '',
+            targetAudience: page.targetAudience || null,
+            actionPlan: page.actionPlan || null,
+            monetizationHint: (page.monetizationChannels || ''),
+            keyFacts: page.extractedSignals ? page.extractedSignals.split('\n').filter(Boolean) : [],
+            metadata: {
+                sourceUrl: page.url,
+                profitScore: String(page.profitScore),
+                interestingnessScore: String(page.interestingnessScore || 0),
+                feasibilityScore: String(page.feasibilityScore),
+                opportunityType: page.opportunityType || '',
+                siteConcept: page.siteConcept || '',
+                uniqueAngle: page.uniqueAngle || '',
+                estimatedEffort: page.estimatedEffort || '',
+                estimatedReward: page.estimatedReward || ''
+            }
+        }
+    };
+}
+
+async function startClarification() {
+    const input = (window.clarifySource || 'idea') === 'idea' ? buildInputFromIdea() : buildInputFromHunter();
+    if (!input) return;
+
+    const model = getSelectedModel();
+    const clarificationModelId = getSelectedClarifyModelId();
+    const btn = document.getElementById('btnStartClarify');
+    btn.disabled = true;
+    showClarifyLoading(true, `Analyzing with ${clarificationModelId || 'default model'}...`);
+
+    try {
+        const res = await fetch('/api/clarify/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ input, model, clarificationModelId, clarificationProvider: getClarifyProvider() })
+        });
+        const data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Clarification failed', 'danger'); return; }
+
+        clarifySessionId = data.sessionId;
+        currentClarification = data.clarification;
+        warningDismissed = false;
+
+        if ((window.clarifySource || 'idea') === 'idea') {
+            const ideaFiles = document.getElementById('ideaAttachments');
+            const hasFiles = ideaFiles?.files?.length > 0;
+            const hasClipboard = clipboardIdeaImages.length > 0;
+            if (hasFiles || hasClipboard) {
+                const formData = new FormData();
+                for (const file of (ideaFiles?.files || [])) formData.append('files', file);
+                for (const file of clipboardIdeaImages) formData.append('files', file);
+                try {
+                    await fetch(`/api/clarify/${clarifySessionId}/upload-context`, { method: 'POST', body: formData });
+                } catch(e) { /* continue without attachments */ }
+                clipboardIdeaImages = [];
+                renderIdeaClipboardPreviews();
+            }
+        }
+
+        if (data.clarificationModel) {
+            clarifyPremiumRequests = [{ model: data.clarificationModel, requestType: 'Clarification', promptLength: 0, timestamp: new Date().toISOString() }];
+        }
+
+        // Server may auto-skip the clarification UI when the model is fully confident
+        // and needs no human input — it returns a generationId and we go straight to streaming.
+        if (data.generationId) {
+            hideAllClarify();
+            document.getElementById('genPipeline').classList.remove('d-none');
+            updateStepper('generate');
+            document.getElementById('genLogPanel').classList.remove('d-none');
+            document.getElementById('genLogContent').textContent = '';
+            document.getElementById('genPipelineStatus').classList.remove('d-none');
+            document.getElementById('genPipelineStatus').textContent = 'No clarification needed — code generation started.';
+            showToast('AI was confident — skipping clarification', 'info');
+            saveClarifyActiveSession();
+            connectClarifyStream();
+            return;
+        }
+
+        hideAllClarify();
+        updateStepper('clarify');
+        renderClarification(data.clarification, data.qualityWarning);
+    } catch(e) { showToast('Error: ' + e.message, 'danger'); }
+    finally {
+        showClarifyLoading(false);
+        btn.disabled = false;
+    }
+}
+
+function renderClarification(clarification, qualityWarning) {
+    document.getElementById('clarificationSection').classList.remove('d-none');
+    document.getElementById('clarifyStatusBadge').textContent = 'Awaiting Answers';
+    document.getElementById('clarifyStatusBadge').className = 'badge bg-info';
+
+    // Summary
+    document.getElementById('summaryText').textContent = clarification.summary;
+    const confBadge = document.getElementById('confidenceBadge');
+    const confMap = { high: 'bg-success', medium: 'bg-warning text-dark', low: 'bg-danger' };
+    confBadge.textContent = `Confidence: ${clarification.confidence}`;
+    confBadge.className = `badge ${confMap[clarification.confidence] || 'bg-secondary'}`;
+
+    // Quality warning
+    if (qualityWarning && !warningDismissed) {
+        document.getElementById('qualityWarning').classList.remove('d-none');
+        document.getElementById('qualityWarningText').textContent = qualityWarning.reason;
+        document.getElementById('submitSection').classList.add('d-none');
+    } else {
+        document.getElementById('qualityWarning').classList.add('d-none');
+        document.getElementById('submitSection').classList.remove('d-none');
+    }
+
+    // Assumptions
+    if (clarification.assumptions && clarification.assumptions.length > 0) {
+        document.getElementById('assumptionsPanel').classList.remove('d-none');
+        const list = document.getElementById('assumptionsList');
+        list.innerHTML = clarification.assumptions.map(a =>
+            `<li>${escapeHtmlC(a)}</li>`).join('');
+    } else {
+        document.getElementById('assumptionsPanel').classList.add('d-none');
+    }
+
+    // Questions
+    const qForm = document.getElementById('questionsForm');
+    qForm.innerHTML = '';
+    if (clarification.clarifying_questions && clarification.clarifying_questions.length > 0) {
+        clarification.clarifying_questions.forEach(q => {
+            const card = document.createElement('div');
+            card.className = 'q-card-clarify';
+            card.dataset.questionId = q.id;
+
+            let inputHtml = '';
+            if (q.input_type === 'boolean') {
+                inputHtml = `
+                    <div class="d-flex gap-3">
+                        <div class="form-check">
+                            <input class="form-check-input q-answer" type="radio" name="q_${q.id}" value="Yes" id="q_${q.id}_yes"/>
+                            <label class="form-check-label" for="q_${q.id}_yes">Yes</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input q-answer" type="radio" name="q_${q.id}" value="No" id="q_${q.id}_no"/>
+                            <label class="form-check-label" for="q_${q.id}_no">No</label>
+                        </div>
+                    </div>`;
+            } else if (q.input_type === 'select' && q.options.length > 0) {
+                inputHtml = q.options.map((opt, oi) => `
+                    <div class="q-option-clarify">
+                        <input class="form-check-input q-answer" type="radio" name="q_${q.id}" value="${escapeHtmlC(opt)}" id="q_${q.id}_${oi}"/>
+                        <label for="q_${q.id}_${oi}">${escapeHtmlC(opt)}</label>
+                    </div>`).join('') +
+                    `<div class="mt-2"><input type="text" class="form-control form-control-sm q-custom-answer" data-qid="${q.id}" placeholder="Or type your own..."/></div>`;
+            } else if (q.input_type === 'multiselect' && q.options.length > 0) {
+                inputHtml = q.options.map((opt, oi) => `
+                    <div class="q-option-clarify">
+                        <input class="form-check-input q-answer-multi" type="checkbox" name="q_${q.id}" value="${escapeHtmlC(opt)}" id="q_${q.id}_${oi}"/>
+                        <label for="q_${q.id}_${oi}">${escapeHtmlC(opt)}</label>
+                    </div>`).join('') +
+                    `<div class="mt-2"><input type="text" class="form-control form-control-sm q-custom-answer" data-qid="${q.id}" placeholder="Or add your own..."/></div>`;
+            } else {
+                inputHtml = `<input type="text" class="form-control q-answer-text" data-qid="${q.id}" placeholder="Type your answer..."/>`;
+            }
+
+            card.innerHTML = `
+                <h6>${escapeHtmlC(q.question)}</h6>
+                <div class="q-reason"><i class="bi bi-info-circle me-1"></i>${escapeHtmlC(q.reason)}</div>
+                ${inputHtml}`;
+            qForm.appendChild(card);
+        });
+    }
+
+    // Env Vars
+    const envVars = clarification.required_env_vars || [];
+    const userInputVars = envVars.filter(v => v.source === 'user_input');
+    const autoVars = envVars.filter(v => v.source !== 'user_input');
+
+    if (envVars.length > 0) {
+        document.getElementById('envVarsSection').classList.remove('d-none');
+        const list = document.getElementById('envVarsList');
+        list.innerHTML = '';
+
+        if (userInputVars.length > 0) {
+            list.innerHTML += '<div class="small fw-semibold mb-2 text-danger"><i class="bi bi-exclamation-circle me-1"></i>You must provide:</div>';
+            userInputVars.forEach(v => {
+                list.innerHTML += `
+                    <div class="env-var-card">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="env-key">${escapeHtmlC(v.key)}</span>
+                            <span class="env-source badge bg-danger">User Input</span>
+                        </div>
+                        <div class="env-desc">${escapeHtmlC(v.description)}</div>
+                        <input type="text" class="form-control form-control-sm mt-1 env-input"
+                            data-key="${escapeHtmlC(v.key)}"
+                            placeholder="${escapeHtmlC(v.example_value || 'Enter value...')}"/>
+                    </div>`;
+            });
+        }
+
+        if (autoVars.length > 0) {
+            list.innerHTML += '<div class="small fw-semibold mb-2 mt-3 text-success"><i class="bi bi-check-circle me-1"></i>Auto-configured:</div>';
+            autoVars.forEach(v => {
+                const sourceLabel = v.source === 'azd_output' ? 'azd output' : 'Key Vault';
+                const sourceCls = v.source === 'azd_output' ? 'bg-info' : 'bg-warning text-dark';
+                list.innerHTML += `
+                    <div class="env-var-card" style="opacity:.7">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="env-key">${escapeHtmlC(v.key)}</span>
+                            <span class="env-source badge ${sourceCls}">${sourceLabel}</span>
+                        </div>
+                        <div class="env-desc">${escapeHtmlC(v.description)}</div>
+                    </div>`;
+            });
+        }
+    } else {
+        document.getElementById('envVarsSection').classList.add('d-none');
+    }
+
+    // Show clarification premium request info
+    renderClarifyPremiumInfo();
+}
+
+function renderClarifyPremiumInfo() {
+    var section = document.getElementById('clarifyPremiumSection');
+    if (!__isAdmin) { section.style.display = 'none'; return; }
+    var badge = document.getElementById('clarifyPremiumBadge');
+    var modelDiv = document.getElementById('clarifyPremiumModel');
+    if (clarifyPremiumRequests.length > 0) {
+        var req = clarifyPremiumRequests[clarifyPremiumRequests.length - 1];
+        section.style.display = '';
+        badge.textContent = clarifyPremiumRequests.length;
+        modelDiv.textContent = 'Model: ' + (req.model || '—');
+    } else {
+        section.style.display = 'none';
+    }
+}
+
+function proceedAnyway() {
+    warningDismissed = true;
+    document.getElementById('qualityWarning').classList.add('d-none');
+    document.getElementById('submitSection').classList.remove('d-none');
+}
+
+async function rerunPowerful() {
+    if (!clarifySessionId) return;
+    var clarificationModelId = getSelectedClarifyModelId();
+    showClarifyLoading(true, `Re-running with ${clarificationModelId || 'default model'}...`);
+
+    try {
+        const res = await fetch(`/api/clarify/${clarifySessionId}/rerun`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: 'Powerful', clarificationModelId, clarificationProvider: getClarifyProvider() })
+        });
+        const data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Re-run failed', 'danger'); return; }
+
+        currentClarification = data.clarification;
+        warningDismissed = false;
+        if (data.clarificationModel) {
+            clarifyPremiumRequests = [{ model: data.clarificationModel, requestType: 'Clarification', promptLength: 0, timestamp: new Date().toISOString() }];
+        }
+        renderClarification(data.clarification, data.qualityWarning);
+    } catch(e) { showToast('Error: ' + e.message, 'danger'); }
+    finally { showClarifyLoading(false); }
+}
+
+function collectClarifyAnswers() {
+    const answers = {};
+    const envVars = {};
+
+    document.querySelectorAll('.q-card-clarify').forEach(card => {
+        const qid = card.dataset.questionId;
+
+        // Radio (select / boolean)
+        const radio = card.querySelector(`.q-answer:checked`);
+        if (radio) { answers[qid] = radio.value; return; }
+
+        // Multiselect
+        const checked = Array.from(card.querySelectorAll('.q-answer-multi:checked')).map(c => c.value);
+        const custom = card.querySelector('.q-custom-answer');
+        if (checked.length > 0 || (custom && custom.value.trim())) {
+            const parts = [...checked];
+            if (custom && custom.value.trim()) parts.push(custom.value.trim());
+            answers[qid] = parts.join(', ');
+            return;
+        }
+
+        // Text
+        const textInput = card.querySelector('.q-answer-text');
+        if (textInput && textInput.value.trim()) {
+            answers[qid] = textInput.value.trim();
+            return;
+        }
+
+        // Custom fallback for select
+        if (custom && custom.value.trim()) {
+            answers[qid] = custom.value.trim();
+        }
+    });
+
+    document.querySelectorAll('.env-input').forEach(input => {
+        if (input.value.trim()) {
+            envVars[input.dataset.key] = input.value.trim();
+        }
+    });
+
+    return { answers, collectedEnvVars: envVars };
+}
+
+async function submitAnswers() {
+    if (!clarifySessionId) return;
+
+    const payload = collectClarifyAnswers();
+
+    document.getElementById('clarificationSection').classList.add('d-none');
+    document.getElementById('genPipeline').classList.remove('d-none');
+    updateStepper('generate');
+    document.getElementById('genLogPanel').classList.remove('d-none');
+    document.getElementById('genLogContent').textContent = '';
+    document.getElementById('genPipelineStatus').classList.remove('d-none');
+    document.getElementById('genPipelineStatus').textContent = 'Submitting answers & starting code generation...';
+
+    try {
+        const codegenModel = getSelectedCodegenModelId();
+        const submitPayload = { ...payload };
+        if (codegenModel) submitPayload.codegenModelId = codegenModel;
+        const codegenProvider = getCodegenProvider();
+        if (codegenProvider) submitPayload.codegenProvider = codegenProvider;
+        const codegenReasoning = getCodegenReasoning();
+        if (codegenReasoning) submitPayload.reasoningEffort = codegenReasoning;
+        // Only send fixModelId when user explicitly selected a model (not the "(same as codegen)" default)
+        const fixModelSel = document.getElementById('autofixModelSelect');
+        const fixModelId = fixModelSel?.value || undefined;
+        if (fixModelId) submitPayload.fixModelId = fixModelId;
+        const res = await fetch(`/api/clarify/${clarifySessionId}/submit`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(submitPayload)
+        });
+        const data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Submission failed', 'danger'); resetClarify(); return; }
+
+        document.getElementById('genPipelineStatus').textContent = 'Code generation in progress...';
+        showToast('Code generation started!', 'info');
+        saveClarifyActiveSession();
+        connectClarifyStream();
+    } catch(e) {
+        showToast('Error: ' + e.message, 'danger');
+        resetClarify();
+    }
+}
+
+function connectClarifyStream() {
+    if (clarifyEventSource) { clarifyEventSource.close(); clarifyEventSource = null; }
+    clarifyReconnectAttempts = 0;
+    startStatusPoll();
+
+    clarifyEventSource = authEventSource(`/api/clarify/${clarifySessionId}/stream`);
+
+    clarifyEventSource.onmessage = function(e) {
+        if (this !== clarifyEventSource) { this.close(); return; }
+        try {
+            const evt = JSON.parse(e.data);
+
+            if (evt.type === 'AutoRetry') {
+                appendGenLog('[RETRY] ' + (evt.detail || 'Auto-retrying...'), '#dcdcaa');
+                document.getElementById('genPipelineStatus').textContent = 'Auto-retrying code generation...';
+                clarifyEventSource.close();
+                clarifyEventSource = null;
+                setTimeout(connectClarifyStream, 2000);
+                return;
+            }
+
+            if (evt.type === 'Done') {
+                clarifyEventSource.close();
+                clarifyEventSource = null;
+
+                if (evt.detail === 'Completed' || evt.detail === 'GenerationComplete') {
+                    appendGenLog('[DONE] Code generation complete!', '#4ec9b0');
+                    completeClarifyPipeline();
+                } else {
+                    appendGenLog('[ERROR] ' + (evt.error || 'Generation failed'), '#f44747');
+                    if (evt.error) {
+                        var improveEl = document.getElementById('improveInstruction');
+                        if (improveEl) improveEl.value = 'Fix code generation error:\n' + evt.error;
+                    }
+                    failClarifyPipeline();
+                    showToast('Code generation failed: ' + (evt.error || 'Unknown error'), 'danger');
+                }
+                return;
+            }
+
+            if (evt.type === 'CopilotSdkRequest') {
+                try { clarifyPremiumRequests.push({ ...JSON.parse(evt.detail), timestamp: evt.timestamp }); } catch(ex) { /* ignore */ }
+                return;
+            }
+
+            const prefix = evt.type === 'ToolStarted' ? '[TOOL] '
+                : evt.type === 'ToolCompleted' ? '[DONE] '
+                : evt.type === 'Error' ? '[ERR]  '
+                : evt.type === 'AssistantMessage' ? '[AI]   '
+                : '[' + evt.type + '] ';
+
+            const color = evt.type === 'Error' ? '#f44747'
+                : evt.type === 'ToolStarted' ? '#569cd6'
+                : evt.type === 'ToolCompleted' ? '#4ec9b0'
+                : evt.type === 'AssistantMessage' ? '#dcdcaa'
+                : '#d4d4d4';
+
+            appendGenLog(prefix + (evt.detail || ''), color);
+
+            const dots = '.'.repeat((document.getElementById('genLogContent').textContent.split('\n').length % 3) + 1);
+            document.getElementById('genPipelineStatus').textContent = `Generating code${dots}`;
+        } catch(ex) { /* ignore parse errors */ }
+    };
+
+    clarifyEventSource.onerror = function() {
+        // Guard: ignore errors from a stale EventSource that was already replaced
+        if (this !== clarifyEventSource) { this.close(); return; }
+        clarifyEventSource.close();
+        clarifyEventSource = null;
+        clarifyReconnectAttempts++;
+
+        // If the page is hidden (screen off, tab backgrounded), don't burn through
+        // reconnect attempts — the visibilitychange handler will reconnect when visible.
+        if (document.visibilityState === 'hidden') {
+            appendGenLog('[DISCONNECTED] Page is hidden, will reconnect when visible.', '#ce9178');
+            return;
+        }
+
+        appendGenLog('[DISCONNECTED] Checking status...', '#ce9178');
+
+        (async () => {
+            try {
+                const res = await fetch(`/api/clarify/${clarifySessionId}`);
+                if (!res.ok) {
+                    appendGenLog('[DISCONNECTED] Status check failed, will retry...', '#ce9178');
+                    return;
+                }
+                const session = await res.json();
+                if (session.status === 'GenerationComplete') {
+                    clearClarifyActiveSession();
+                    completeClarifyPipeline();
+                } else if (session.status === 'Deployed' || session.status === 'DeployFailed' || session.status === 'TornDown') {
+                    clearClarifyActiveSession();
+                    showClarifyDeploySection(session);
+                } else if ((session.status === 'Generating' || session.status === 'Improving')
+                           && clarifyReconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                    // Exponential backoff: 2s, 4s, 8s, 16s... capped at 30s
+                    var delay = Math.min(2000 * Math.pow(2, clarifyReconnectAttempts - 1), 30000);
+                    appendGenLog(`[RECONNECTING] Attempt ${clarifyReconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} (retry in ${(delay/1000).toFixed(0)}s)...`, '#ce9178');
+                    setTimeout(connectClarifyStream, delay);
+                } else if (session.status === 'Generating' || session.status === 'Improving') {
+                    appendGenLog('[INFO] Generation is running server-side. The page will auto-reconnect when possible.', '#dcdcaa');
+                    // Don't give up — the status poll and visibility handler will catch completion
+                } else if (session.status === 'Deploying') {
+                    showClarifyDeploySection(session);
+                    startDeployPolling();
+                } else {
+                    clearClarifyActiveSession();
+                    failClarifyPipeline();
+                }
+            } catch(e) {
+                // Network error during status check — don't fail, let status poll handle it
+                appendGenLog('[DISCONNECTED] Network error, will retry...', '#ce9178');
+            }
+        })();
+    };
+}
+
+function appendGenLog(text, color) {
+    const el = document.getElementById('genLogContent');
+    const span = document.createElement('span');
+    span.style.color = color || '#d4d4d4';
+    span.textContent = text + '\n';
+    el.appendChild(span);
+    el.scrollTop = el.scrollHeight;
+}
+
+function completeClarifyPipeline() {
+    clearClarifyActiveSession();
+    stopStatusPoll();
+    document.getElementById('gstep-codegen').classList.remove('active');
+    document.getElementById('gstep-codegen').classList.add('done');
+    document.getElementById('gstep-codegen').querySelector('.step-status').innerHTML =
+        '<i class="bi bi-check-circle-fill text-success"></i>';
+    document.getElementById('gstep-done').classList.add('done');
+    document.getElementById('gstep-done').querySelector('.step-status').innerHTML =
+        '<i class="bi bi-check-circle-fill text-success"></i>';
+    document.getElementById('genPipelineStatus').textContent = '';
+
+    (async () => {
+        const res = await fetch(`/api/clarify/${clarifySessionId}`);
+        const session = await res.json();
+        // Double-check actual session status — SSE and session state can desync
+        if (session.status === 'Failed') {
+            failClarifyPipelineWithSession(session);
+            showToast('Code generation failed.', 'danger');
+            return;
+        }
+        showClarifyDeploySection(session);
+        if (session.status === 'Deployed' || session.status === 'Deploying') {
+            // Already deployed or deploying — don't re-trigger
+        } else {
+            showToast('Code generation complete! Starting deployment...', 'success');
+            autoDeployAzure();
+        }
+    })();
+}
+
+function failClarifyPipeline() {
+    clearClarifyActiveSession();
+    stopStatusPoll();
+    document.getElementById('gstep-codegen').classList.remove('active');
+    document.getElementById('gstep-codegen').classList.add('text-danger');
+    document.getElementById('gstep-codegen').querySelector('.step-status').innerHTML =
+        '<i class="bi bi-x-circle-fill text-danger"></i>';
+    document.getElementById('genPipelineStatus').textContent = 'Generation failed.';
+    showRetryPanel();
+    // Restore premium requests + fix history from server (may have been accumulated before failure)
+    if (clarifySessionId) {
+        fetch(`/api/clarify/${clarifySessionId}`)
+            .then(r => r.ok ? r.json() : null)
+            .then(session => {
+                if (!session) return;
+                const requests = (session.copilotRequests && session.copilotRequests.length > 0)
+                    ? session.copilotRequests : clarifyPremiumRequests;
+                renderPremiumRequests(requests);
+                renderFixHistory(session.fixHistory || []);
+            })
+            .catch(() => {});
+    }
+}
+
+function failClarifyPipelineWithSession(session) {
+    clearClarifyActiveSession();
+    stopStatusPoll();
+    document.getElementById('gstep-codegen').classList.remove('active');
+    document.getElementById('gstep-codegen').classList.add('text-danger');
+    document.getElementById('gstep-codegen').querySelector('.step-status').innerHTML =
+        '<i class="bi bi-x-circle-fill text-danger"></i>';
+    document.getElementById('genPipelineStatus').textContent = 'Generation failed.';
+    showRetryPanel();
+    const requests = (session.copilotRequests && session.copilotRequests.length > 0)
+        ? session.copilotRequests : clarifyPremiumRequests;
+    renderPremiumRequests(requests);
+    renderFixHistory(session.fixHistory || []);
+}
+
+async function showRetryPanel() {
+    let retryPanel = document.getElementById('retryPanel');
+    if (!retryPanel) {
+        retryPanel = document.createElement('div');
+        retryPanel.id = 'retryPanel';
+        document.getElementById('genPipeline').querySelector('.card-body').appendChild(retryPanel);
+    }
+
+    let modelOptions = '';
+    let currentModelId = null;
+    try {
+        const res = await fetch('/api/clarify/models');
+        if (res.ok) {
+            const data = await res.json();
+            currentModelId = data.currentModel || null;
+            modelOptions = (data.models || []).map(m =>
+                `<option value="${escapeHtmlC(m.id)}" ${currentModelId && m.id === currentModelId ? 'selected' : ''}>${escapeHtmlC(m.name || m.id)}</option>`
+            ).join('');
+        }
+    } catch(e) { /* use empty list */ }
+
+    retryPanel.innerHTML = `
+        <div class="alert alert-warning mt-3 mb-0">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <i class="bi bi-arrow-clockwise"></i>
+                <strong>Retry Code Generation</strong>
+            </div>
+            <p class="small mb-2">The generation failed. You can retry with the same or a different model.</p>
+            <div class="d-flex align-items-end gap-2 flex-wrap">
+                ${modelOptions ? `
+                <div class="flex-grow-1" style="max-width: 300px;">
+                    <label class="form-label small mb-1">Model</label>
+                    <select id="retryModelSelect" class="form-select form-select-sm">
+                        ${modelOptions || `<option value="">(default)</option>`}
+                    </select>
+                </div>` : ''}
+                <button class="btn btn-warning btn-sm" onclick="retryGeneration()">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Retry
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="resetClarify()">
+                    <i class="bi bi-x-circle me-1"></i>Cancel
+                </button>
+            </div>
+        </div>`;
+}
+
+async function retryGeneration() {
+    if (!clarifySessionId) return;
+
+    const modelSelect = document.getElementById('retryModelSelect');
+    const model = modelSelect ? modelSelect.value || null : null;
+
+    const retryPanel = document.getElementById('retryPanel');
+    if (retryPanel) retryPanel.remove();
+
+    document.getElementById('gstep-codegen').classList.remove('text-danger');
+    document.getElementById('gstep-codegen').classList.add('active');
+    document.getElementById('gstep-codegen').querySelector('.step-status').innerHTML =
+        '<span class="spinner-border spinner-border-sm text-primary"></span>';
+    document.getElementById('genPipelineStatus').textContent = 'Retrying code generation...';
+    appendGenLog('\n[RETRY] Starting retry...', '#dcdcaa');
+
+    try {
+        const res = await fetch(`/api/clarify/${clarifySessionId}/retry`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model, provider: getCodegenProvider() })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            showToast(data.error || 'Retry failed', 'danger');
+            failClarifyPipeline();
+            return;
+        }
+        saveClarifyActiveSession();
+        connectClarifyStream();
+    } catch(e) {
+        showToast('Error: ' + e.message, 'danger');
+        failClarifyPipeline();
+    }
+}
+
+function resetClarify() {
+    clearClarifyActiveSession();
+    stopStatusPoll();
+    if (clarifyEventSource) { clarifyEventSource.close(); clarifyEventSource = null; }
+    clarifySessionId = null;
+    currentClarification = null;
+    warningDismissed = false;
+    hideAllClarify();
+    updateStepper('source');
+    document.getElementById('sourceSection').classList.remove('d-none');
+    loadDeployments();
+}
+
+async function deleteClarifySession() {
+    if (!clarifySessionId || !confirm('Delete this session and all generated files?')) return;
+    try {
+        await fetch(`/api/clarify/${clarifySessionId}`, { method: 'DELETE' });
+        showToast('Session deleted', 'success');
+        resetClarify();
+    } catch(e) { showToast('Error: ' + e.message, 'danger'); }
+}
+
+async function resumeClarifySession(id) {
+    showClarifyLoading(true, 'Loading session...');
+    try {
+        const res = await fetch(`/api/clarify/${id}`);
+        if (!res.ok) { showToast('Session not found', 'danger'); return; }
+        const session = await res.json();
+        clarifySessionId = session.id;
+        restoreClarifySession(session);
+    } catch(e) { showToast('Error: ' + e.message, 'danger'); }
+    finally { showClarifyLoading(false); }
+}
+
+function restoreClarifySession(session) {
+    hideAllClarify();
+    if (session.status === 'AwaitingClarification' && session.clarificationResponse) {
+        currentClarification = session.clarificationResponse;
+        renderClarification(session.clarificationResponse, session.qualityWarning);
+    } else if (session.status === 'Generating' || session.status === 'Improving') {
+        document.getElementById('genPipeline').classList.remove('d-none');
+        document.getElementById('genLogPanel').classList.remove('d-none');
+        document.getElementById('genPipelineStatus').classList.remove('d-none');
+        document.getElementById('genPipelineStatus').textContent = session.status === 'Improving'
+            ? 'Applying improvements...' : 'Code generation in progress...';
+        connectClarifyStream();
+    } else if (session.status === 'GenerationComplete' || session.status === 'Deploying' || session.status === 'Deployed' || session.status === 'TornDown' || session.status === 'DeployFailed') {
+        showClarifyDeploySection(session);
+        if (session.status === 'Deploying') startDeployPolling();
+    } else if (session.status === 'Failed') {
+        document.getElementById('genPipeline').classList.remove('d-none');
+        document.getElementById('genLogPanel').classList.remove('d-none');
+        // Also show resultSection so premium requests & fix history (inside it) are visible
+        document.getElementById('resultSection').classList.remove('d-none');
+        // Hide deploy-specific UI elements — keep only premium requests/fix history/user prompt
+        document.getElementById('clarifyDeployButtons').classList.add('d-none');
+        document.getElementById('clarifyDeployedInfo').classList.add('d-none');
+        document.getElementById('clarifyTornDownInfo').classList.add('d-none');
+        document.getElementById('clarifyDeployError').classList.add('d-none');
+        document.getElementById('clarifyResultTabs').classList.add('d-none');
+        document.querySelector('#clarifyResultTabs + .tab-content').classList.add('d-none');
+        var badge = document.getElementById('clarifyDeployBadge');
+        badge.textContent = 'Generation Failed';
+        badge.className = 'badge bg-danger';
+        document.getElementById('resultSolutionPath').textContent = session.solutionPath || '';
+        renderUserPrompt(session);
+        // Pass session directly so premium requests & fix history render immediately without extra fetch
+        failClarifyPipelineWithSession(session);
+    }
+}
+
+// Init — auto-restore active session or show session list
+(async function initClarify() {
+    // Show admin-only model sections
+    if (__isAdmin) {
+        document.querySelectorAll('.admin-only-model-section').forEach(function(el) { el.style.display = ''; });
+    }
+
+    // Mount the unified provider+model selector (visible to all users).
+    try {
+        _clarifyProviderUI = await window.LlmProviderUI.mount({
+            containerId: 'clarifyProviderSelector',
+            kind: 'analysis',
+            label: 'AI Provider for Clarification & Code Generation',
+            helpText: 'Picks the LLM used both for clarifying questions and for generating the code in this session.',
+            showReasoning: true,
+            defaultReasoning: 'high'
+        });
+        _codegenProviderUI = _clarifyProviderUI; // Single selector drives both phases by default.
+    } catch (e) { console.warn('LlmProviderUI mount failed', e); }
+
+    // Load available models into the clarification and code gen dropdowns
+    try {
+        const res = await fetch('/api/clarify/models');
+        if (res.ok) {
+            const data = await res.json();
+            const select = document.getElementById('clarifyModelSelect');
+            const codegenSelect = document.getElementById('codegenModelSelect');
+            var currentModel = data.currentModel || '';
+            var models = data.models || [];
+            _allModelsData = models;
+
+            var copilotModels = models.filter(m => m.provider === 'copilot');
+            var ollamaModels = models.filter(m => m.provider === 'ollama');
+            var openaiModels = models.filter(m => m.provider === 'openai');
+            var anthropicModels = models.filter(m => m.provider === 'anthropic');
+
+            // Build clarification model selector (Copilot + Ollama + OpenAI + Anthropic)
+            var clarifyOpts = '';
+            if (copilotModels.length > 0) {
+                clarifyOpts += '<optgroup label="Copilot SDK">';
+                clarifyOpts += copilotModels.map(m =>
+                    `<option value="${escapeHtmlC(m.id)}" ${m.id === currentModel ? 'selected' : ''}>${escapeHtmlC(m.name || m.id)}</option>`
+                ).join('');
+                clarifyOpts += '</optgroup>';
+            }
+            if (openaiModels.length > 0) {
+                clarifyOpts += '<optgroup label="OpenAI">';
+                clarifyOpts += openaiModels.map(m =>
+                    `<option value="openai:${escapeHtmlC(m.id)}" ${m.id === currentModel ? 'selected' : ''}>${escapeHtmlC(m.name || m.id)}</option>`
+                ).join('');
+                clarifyOpts += '</optgroup>';
+            }
+            if (anthropicModels.length > 0) {
+                clarifyOpts += '<optgroup label="Anthropic">';
+                clarifyOpts += anthropicModels.map(m =>
+                    `<option value="anthropic:${escapeHtmlC(m.id)}" ${m.id === currentModel ? 'selected' : ''}>${escapeHtmlC(m.name || m.id)}</option>`
+                ).join('');
+                clarifyOpts += '</optgroup>';
+            }
+            if (ollamaModels.length > 0) {
+                clarifyOpts += '<optgroup label="Ollama (local)">';
+                clarifyOpts += ollamaModels.map(m =>
+                    `<option value="ollama:${escapeHtmlC(m.id)}" ${m.id === currentModel ? 'selected' : ''}>${escapeHtmlC(m.name || m.id)}</option>`
+                ).join('');
+                clarifyOpts += '</optgroup>';
+            }
+            if (!clarifyOpts) clarifyOpts = '<option value="">(no models available)</option>';
+            select.innerHTML = clarifyOpts;
+
+            // Build code generation model selector
+            var codegenOpts = '<option value="">(use default from Settings)</option>';
+            if (copilotModels.length > 0) {
+                codegenOpts += '<optgroup label="Copilot SDK">';
+                codegenOpts += copilotModels.map(m =>
+                    `<option value="${escapeHtmlC(m.id)}">${escapeHtmlC(m.name || m.id)}</option>`
+                ).join('');
+                codegenOpts += '</optgroup>';
+            }
+            if (openaiModels.length > 0) {
+                codegenOpts += '<optgroup label="OpenAI">';
+                codegenOpts += openaiModels.map(m =>
+                    `<option value="openai:${escapeHtmlC(m.id)}">${escapeHtmlC(m.name || m.id)}</option>`
+                ).join('');
+                codegenOpts += '</optgroup>';
+            }
+            if (anthropicModels.length > 0) {
+                codegenOpts += '<optgroup label="Anthropic">';
+                codegenOpts += anthropicModels.map(m =>
+                    `<option value="anthropic:${escapeHtmlC(m.id)}">${escapeHtmlC(m.name || m.id)}</option>`
+                ).join('');
+                codegenOpts += '</optgroup>';
+            }
+            if (ollamaModels.length > 0) {
+                codegenOpts += '<optgroup label="Ollama (local)">';
+                codegenOpts += ollamaModels.map(m =>
+                    `<option value="ollama:${escapeHtmlC(m.id)}">${escapeHtmlC(m.name || m.id)}</option>`
+                ).join('');
+                codegenOpts += '</optgroup>';
+            }
+            codegenSelect.innerHTML = codegenOpts;
+
+            // Build improve model selector (same as codegen)
+            var improveSelect = document.getElementById('improveModelSelect');
+            if (improveSelect) improveSelect.innerHTML = codegenOpts;
+
+            // Build auto-fix model selector (same as codegen)
+            var autofixSelect = document.getElementById('autofixModelSelect');
+            if (autofixSelect) autofixSelect.innerHTML = '<option value="">(same as codegen)</option>' + codegenOpts.replace('<option value="">(use default from Settings)</option>', '');
+
+            // Wire adaptive reasoning for improve model
+            if (improveSelect) {
+                improveSelect.addEventListener('change', function() {
+                    updateReasoningForModelSelect(improveSelect, document.getElementById('improveReasoningSelect'));
+                });
+                updateReasoningForModelSelect(improveSelect, document.getElementById('improveReasoningSelect'));
+            }
+
+            // Wire adaptive reasoning for auto-fix model
+            if (autofixSelect) {
+                autofixSelect.addEventListener('change', function() {
+                    updateReasoningForModelSelect(autofixSelect, document.getElementById('autofixReasoningSelect'));
+                });
+                updateReasoningForModelSelect(autofixSelect, document.getElementById('autofixReasoningSelect'));
+            }
+
+            // Wire adaptive reasoning for clarify model
+            var clarifyReasoningSel = document.getElementById('clarifyReasoningSelect');
+            if (select && clarifyReasoningSel) {
+                select.addEventListener('change', function() {
+                    updateReasoningForModelSelect(select, clarifyReasoningSel);
+                });
+                updateReasoningForModelSelect(select, clarifyReasoningSel);
+            }
+
+            // Wire adaptive reasoning for codegen model
+            var codegenReasoningSel = document.getElementById('codegenReasoningSelect');
+            if (codegenSelect && codegenReasoningSel) {
+                codegenSelect.addEventListener('change', function() {
+                    updateReasoningForModelSelect(codegenSelect, codegenReasoningSel);
+                });
+                updateReasoningForModelSelect(codegenSelect, codegenReasoningSel);
+            }
+
+            // Show Ollama status indicator
+            if (data.ollamaRunning !== undefined) {
+                var badge = document.createElement('span');
+                badge.className = data.ollamaRunning ? 'badge bg-success ms-2' : 'badge bg-secondary ms-2';
+                badge.textContent = data.ollamaRunning ? `Ollama: ${ollamaModels.length} model(s)` : 'Ollama: offline';
+                badge.style.fontSize = '0.7rem';
+                var modelSections = document.querySelectorAll('.admin-only-model-section');
+                if (modelSections.length > 1) {
+                    var label = modelSections[1].querySelector('.form-label');
+                    if (label && !label.querySelector('.badge')) label.appendChild(badge);
+                }
+            }
+        }
+    } catch(e) {
+        document.getElementById('clarifyModelSelect').innerHTML = '<option value="">(could not load models)</option>';
+        document.getElementById('codegenModelSelect').innerHTML = '<option value="">(could not load models)</option>';
+    }
+
+    const savedId = sessionStorage.getItem('clarify_active_session');
+    if (savedId) {
+        const backTo = sessionStorage.getItem('clarify_back_to');
+        sessionStorage.removeItem('clarify_back_to');
+        try {
+            const res = await fetch(`/api/clarify/${savedId}`);
+            if (res.ok) {
+                const session = await res.json();
+                if (backTo === 'projects') showBackToProjects();
+                if (session.status === 'Generating' || session.status === 'Improving') {
+                    clarifySessionId = session.id;
+                    restoreClarifySession(session);
+                    return;
+                } else {
+                    clearClarifyActiveSession();
+                    clarifySessionId = session.id;
+                    restoreClarifySession(session);
+                    return;
+                }
+            }
+        } catch(e) { /* ignore */ }
+        clearClarifyActiveSession();
+    }
+})();
+
+function showBackToProjects() {
+    if (document.getElementById('btnBackToProjects')) return;
+    const header = document.querySelector('.page-header');
+    if (!header) return;
+    const btn = document.createElement('a');
+    btn.id = 'btnBackToProjects';
+    btn.href = '/projects';
+    btn.className = 'btn btn-outline-secondary btn-sm mb-3 d-inline-flex align-items-center gap-1';
+    btn.innerHTML = '<i class="bi bi-arrow-left"></i>Back to Projects';
+    header.insertAdjacentElement('afterend', btn);
+}
+
+function showClarifyDeploySection(session) {
+    document.getElementById('resultSection').classList.remove('d-none');
+    // Ensure tabs are visible (may have been hidden by Failed state)
+    document.getElementById('clarifyResultTabs').classList.remove('d-none');
+    var tabContent = document.querySelector('#clarifyResultTabs + .tab-content');
+    if (tabContent) tabContent.classList.remove('d-none');
+    updateStepper('deploy');
+    document.getElementById('resultSolutionPath').textContent = session.solutionPath || '';
+
+    const isDeployed = session.status === 'Deployed';
+    const isDeployFailed = session.status === 'DeployFailed';
+    const isTornDown = session.status === 'TornDown';
+    const showInitialDeployButton = session.status === 'GenerationComplete' || isTornDown;
+    document.getElementById('clarifyDeployButtons').classList.toggle('d-none', !showInitialDeployButton);
+    document.getElementById('clarifyDeployedInfo').classList.toggle('d-none', !isDeployed);
+    document.getElementById('clarifyTornDownInfo').classList.toggle('d-none', !isTornDown);
+    document.getElementById('clarifyDeployError').classList.toggle('d-none', !isDeployFailed || !session.lastDeployError);
+
+    if (isDeployFailed && session.lastDeployError) {
+        if (__isAdmin) {
+            document.getElementById('clarifyDeployErrorText').textContent = session.lastDeployError;
+        } else {
+            document.getElementById('clarifyDeployErrorText').textContent = 'Deployment encountered an error. The system is attempting to fix it automatically.';
+        }
+        var existingVal = document.getElementById('improveInstruction').value.trim();
+        if (!existingVal) {
+            document.getElementById('improveInstruction').value =
+                'Fix deployment error:\n' + session.lastDeployError;
+        }
+    }
+    // Only switch to Deployment tab if Fix & Improve is not currently active
+    var improveTab = document.getElementById('tab-improve-btn');
+    if (!improveTab.classList.contains('active')) {
+        bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-deployment-btn')).show();
+    }
+
+    const badgeMap = {
+        'GenerationComplete': ['Ready to Deploy', 'bg-warning'],
+        'Deploying': ['Deploying...', 'bg-info'],
+        'Improving': ['Auto-fixing...', 'bg-info'],
+        'Deployed': ['Deployed', 'bg-success'],
+        'TornDown': ['Torn Down', 'bg-secondary'],
+        'DeployFailed': ['Deploy Failed', 'bg-danger']
+    };
+    const [text, cls] = badgeMap[session.status] || ['Ready to Deploy', 'bg-warning'];
+    const badge = document.getElementById('clarifyDeployBadge');
+    badge.textContent = text;
+    badge.className = `badge ${cls}`;
+
+    if (isDeployed && session.deployedUrl) {
+        const link = document.getElementById('clarifyDeployedLink');
+        link.href = session.deployedUrl;
+        link.textContent = session.deployedUrl;
+    }
+
+    if (__isAdmin) {
+        document.getElementById('clarifyResourceGroup').textContent = session.azureResourceGroup || '';
+        document.getElementById('clarifyResourceGroupRow').style.display = '';
+    } else {
+        document.getElementById('clarifyResourceGroupRow').style.display = 'none';
+    }
+
+    // Render user prompt
+    renderUserPrompt(session);
+
+    // Render premium requests
+    const requests = (session.copilotRequests && session.copilotRequests.length > 0)
+        ? session.copilotRequests
+        : clarifyPremiumRequests;
+    renderPremiumRequests(requests);
+
+    // Render fix history (admin only)
+    renderFixHistory(session.fixHistory || []);
+
+    // Render session timing
+    renderSessionTiming(session);
+}
+
+function renderSessionTiming(session) {
+    var row = document.getElementById('sessionTimingRow');
+    if (!row) return;
+    var parts = [];
+    if (session.createdAt) {
+        var d = new Date(session.createdAt);
+        document.getElementById('sessionCreatedAt').innerHTML =
+            '<i class="bi bi-calendar3 me-1"></i>' + d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) +
+            ' ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    }
+    var timings = session.stepTimings || {};
+    var labels = { clarification: { icon: 'bi-chat-dots', color: '#0d6efd', name: 'Clarification' },
+                   codegen: { icon: 'bi-code-slash', color: '#198754', name: 'Code gen' },
+                   deploy: { icon: 'bi-cloud-upload', color: '#6f42c1', name: 'Deploy' } };
+    var html = '';
+    for (var key of ['clarification', 'codegen', 'deploy']) {
+        var t = timings[key];
+        if (!t || !t.startedAt) continue;
+        var dur = t.durationMs || (t.completedAt ? new Date(t.completedAt) - new Date(t.startedAt) : null);
+        var label = labels[key];
+        var durText = dur != null ? formatDurationShort(dur) : 'in progress';
+        html += '<span class="badge" style="background:' + label.color + '22;color:' + label.color + ';font-size:.75rem">' +
+            '<i class="bi ' + label.icon + ' me-1"></i>' + label.name + ': ' + durText + '</span>';
+    }
+    if (html || session.createdAt) {
+        document.getElementById('sessionTimingBadges').innerHTML = html;
+        row.style.cssText = '';
+    }
+}
+
+function formatDurationShort(ms) {
+    if (ms < 1000) return '<1s';
+    var sec = Math.round(ms / 1000);
+    if (sec < 60) return sec + 's';
+    var min = Math.floor(sec / 60);
+    sec = sec % 60;
+    if (min < 60) return min + 'm ' + (sec > 0 ? sec + 's' : '');
+    var hr = Math.floor(min / 60);
+    min = min % 60;
+    return hr + 'h ' + (min > 0 ? min + 'm' : '');
+}
+
+function renderUserPrompt(session) {
+    var promptText = '';
+    if (session.draft) {
+        promptText = session.draft.title || '';
+        if (session.draft.description) promptText += '\n\n' + session.draft.description;
+    }
+    var section = document.getElementById('userPromptSection');
+    if (promptText.trim()) {
+        document.getElementById('userPromptContent').textContent = promptText.trim();
+        section.style.display = '';
+    } else {
+        section.style.display = 'none';
+    }
+}
+
+function renderPremiumRequests(requests) {
+    var section = document.getElementById('premiumRequestsSection');
+    var list = document.getElementById('premiumRequestsList');
+    var badge = document.getElementById('premiumBadge');
+
+    if (!__isAdmin || !requests || requests.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    section.style.display = '';
+    badge.textContent = requests.length;
+    list.innerHTML = '';
+
+    var typeColors = {
+        Clarification: '#4ec9b0', CodeGeneration: '#569cd6', Continuation: '#ce9178', FreshSessionRetry: '#ce9178',
+        IaCFix: '#f44747', IaCCustomize: '#9cdcfe', IaCConsistency: '#9cdcfe',
+        CombinedFix: '#dcdcaa', SiteValidation: '#b5cea8', DeployFix: '#f44747'
+    };
+
+    requests.forEach(function(req, i) {
+        var type = req.requestType || req.RequestType || '—';
+        var model = req.model || req.Model || '—';
+        var promptLen = req.promptLength || req.PromptLength || 0;
+        var ts = req.timestamp || req.Timestamp;
+        var timeStr = ts ? new Date(ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '';
+        var color = typeColors[type] || '#6c757d';
+        var promptDisplay = promptLen >= 1024 ? (promptLen / 1024).toFixed(1) + 'k chars' : promptLen + ' chars';
+
+        var item = document.createElement('div');
+        item.className = 'premium-request-item';
+        item.innerHTML =
+            '<div class="pr-header" onclick="this.parentElement.classList.toggle(\'open\')">' +
+                '<i class="bi bi-chevron-right small" style="transition:transform .15s"></i>' +
+                '<span style="color:' + color + ';font-weight:500">' + escapeHtmlC(type) + '</span>' +
+                '<span class="text-muted ms-auto" style="font-size:.75rem">' + timeStr + '</span>' +
+            '</div>' +
+            '<div class="pr-detail small text-muted">' +
+                '<div><strong>Model:</strong> <code style="font-size:.75rem">' + escapeHtmlC(model) + '</code></div>' +
+                '<div><strong>Prompt:</strong> ' + promptDisplay + '</div>' +
+            '</div>';
+        list.appendChild(item);
+    });
+}
+
+function renderFixHistory(fixHistory) {
+    var section = document.getElementById('fixHistorySection');
+    var list = document.getElementById('fixHistoryList');
+    var badge = document.getElementById('fixHistoryBadge');
+
+    if (!__isAdmin || !fixHistory || fixHistory.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    section.style.display = '';
+    badge.textContent = fixHistory.length;
+    list.innerHTML = '';
+
+    fixHistory.forEach(function(entry, i) {
+        var ts = entry.timestamp || entry.Timestamp;
+        var timeStr = ts ? new Date(ts).toLocaleString() : '';
+        var item = document.createElement('div');
+        item.className = 'premium-request-item';
+        var errorHtml = entry.error ? '<div class="mt-1"><strong class="text-danger">Error:</strong><pre class="mb-1 small" style="white-space:pre-wrap;max-height:100px;overflow-y:auto">' + escapeHtmlC(entry.error) + '</pre></div>' : '';
+        var conclusionHtml = entry.modelConclusion ? '<div class="mt-1"><strong class="text-info">Model Conclusion:</strong><pre class="mb-0 small" style="white-space:pre-wrap;max-height:100px;overflow-y:auto">' + escapeHtmlC(entry.modelConclusion) + '</pre></div>' : '';
+        item.innerHTML =
+            '<div class="pr-header" onclick="this.parentElement.classList.toggle(\'open\')">' +
+                '<i class="bi bi-chevron-right small" style="transition:transform .15s"></i>' +
+                '<span style="color:#f59e0b;font-weight:500">Fix #' + (i + 1) + '</span>' +
+                '<span class="text-muted ms-2 small text-truncate" style="max-width:250px">' + escapeHtmlC(entry.instruction || '') + '</span>' +
+                '<span class="text-muted ms-auto" style="font-size:.75rem">' + timeStr + '</span>' +
+            '</div>' +
+            '<div class="pr-detail small">' +
+                errorHtml + conclusionHtml +
+                ((!entry.error && !entry.modelConclusion) ? '<span class="text-muted">No error details recorded</span>' : '') +
+            '</div>';
+        list.appendChild(item);
+    });
+}
+
+async function clarifyDeployAzure() {
+    if (!clarifySessionId) return;
+    showClarifyLoading(true, 'Starting deployment...');
+    try {
+        const res = await fetch(`/api/clarify/${clarifySessionId}/deploy/azure`, { method: 'POST' });
+        const text = await res.text();
+        let data;
+        try { data = JSON.parse(text); } catch { showToast(text.slice(0, 200) || 'Deploy failed', 'danger'); return; }
+        if (!res.ok) {
+            showToast(data.error || 'Deploy failed', 'danger');
+            const sessionRes = await fetch(`/api/clarify/${clarifySessionId}`);
+            if (sessionRes.ok) showClarifyDeploySection(await sessionRes.json());
+            return;
+        }
+        showClarifyDeploySection(data);
+        startDeployPolling();
+    } catch(e) {
+        showToast('Error: ' + e.message, 'danger');
+        const sessionRes = await fetch(`/api/clarify/${clarifySessionId}`);
+        if (sessionRes.ok) showClarifyDeploySection(await sessionRes.json());
+    }
+    finally { showClarifyLoading(false); }
+}
+
+let _autoDeployAttempts = 0;
+const MAX_AUTO_DEPLOY_FIX_ATTEMPTS = 2;
+
+async function autoDeployAzure() {
+    if (!clarifySessionId) return;
+    _autoDeployAttempts = 0;
+    // Show genPipeline + genLogPanel so deploy/fix logs are visible
+    document.getElementById('genPipeline').classList.remove('d-none');
+    document.getElementById('genLogPanel').classList.remove('d-none');
+    document.getElementById('genPipelineStatus').classList.remove('d-none');
+    if (__isAdmin) appendGenLog('[DEPLOY] Auto-deploying to Azure...', '#569cd6');
+    document.getElementById('genPipelineStatus').textContent = 'Deploying to Azure...';
+
+    try {
+        const res = await fetch(`/api/clarify/${clarifySessionId}/deploy/azure`, { method: 'POST' });
+        const text = await res.text();
+        let data;
+        try { data = JSON.parse(text); } catch { return; }
+        if (!res.ok) {
+            if (__isAdmin) appendGenLog('[DEPLOY] Deploy request failed: ' + (data.error || ''), '#f44747');
+            showToast(__isAdmin ? ('Deploy failed: ' + (data.error || '')) : 'Could not start deployment automatically.', 'warning');
+            document.getElementById('genPipelineStatus').textContent = '';
+            return;
+        }
+        showClarifyDeploySection(data);
+        startAutoDeployPolling();
+    } catch(e) {
+        if (__isAdmin) appendGenLog('[DEPLOY] Error: ' + e.message, '#f44747');
+        showToast(__isAdmin ? ('Deploy error: ' + e.message) : 'Could not start deployment.', 'warning');
+        document.getElementById('genPipelineStatus').textContent = '';
+    }
+}
+
+function startAutoDeployPolling() {
+    stopDeployPolling();
+    clarifyDeployPollInterval = setInterval(async () => {
+        try {
+            const res = await fetch(`/api/clarify/${clarifySessionId}`);
+            if (!res.ok) return;
+            const session = await res.json();
+            showClarifyDeploySection(session);
+            if (session.status === 'Deployed') {
+                stopDeployPolling();
+                if (__isAdmin) appendGenLog('[DEPLOY] Deployed successfully!', '#4ec9b0');
+                showToast('Deployed to Azure!', 'success');
+            } else if (session.status === 'DeployFailed') {
+                stopDeployPolling();
+                _autoDeployAttempts++;
+                if (__isAdmin) appendGenLog('[DEPLOY] Deploy failed (attempt ' + _autoDeployAttempts + '/' + MAX_AUTO_DEPLOY_FIX_ATTEMPTS + '): ' + (session.lastDeployError || ''), '#f44747');
+                if (_autoDeployAttempts < MAX_AUTO_DEPLOY_FIX_ATTEMPTS && session.lastDeployError) {
+                    autoFixAndRedeploy(session.lastDeployError);
+                } else {
+                    if (__isAdmin) {
+                        showToast('Deploy failed after auto-fix attempts. You can retry manually.', 'danger');
+                    } else {
+                        showToast('Deployment encountered an error. Our team has been notified.', 'warning');
+                    }
+                }
+            }
+        } catch { /* ignore */ }
+    }, 3000);
+}
+
+async function autoFixAndRedeploy(errorText) {
+    if (!clarifySessionId) return;
+    // Ensure genPipeline is visible for fix logs
+    document.getElementById('genPipeline').classList.remove('d-none');
+    document.getElementById('genLogPanel').classList.remove('d-none');
+    document.getElementById('genPipelineStatus').classList.remove('d-none');
+    appendGenLog('[AUTO-FIX] Sending deploy error to AI for fix...', '#dcdcaa');
+    document.getElementById('genPipelineStatus').textContent = 'Auto-fixing deployment error...';
+
+    try {
+        const instruction = 'Fix deployment error:\n' + errorText;
+        const res = await fetch(`/api/clarify/${clarifySessionId}/improve`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ instruction, provider: getCodegenProvider(), model: getAutofixModelId() || undefined, reasoningEffort: getAutofixReasoning() || undefined })
+        });
+        if (!res.ok) {
+            if (__isAdmin) appendGenLog('[AUTO-FIX] Fix request failed', '#f44747');
+            return;
+        }
+        saveClarifyActiveSession();
+        // Connect to SSE stream for fix progress, then auto-deploy again on completion
+        connectAutoFixStream();
+    } catch(e) {
+        if (__isAdmin) appendGenLog('[AUTO-FIX] Error: ' + e.message, '#f44747');
+    }
+}
+
+function connectAutoFixStream() {
+    if (clarifyEventSource) { clarifyEventSource.close(); clarifyEventSource = null; }
+
+    clarifyEventSource = authEventSource(`/api/clarify/${clarifySessionId}/stream`);
+
+    clarifyEventSource.onmessage = function(e) {
+        try {
+            const evt = JSON.parse(e.data);
+            if (evt.type === 'Done') {
+                clarifyEventSource.close();
+                clarifyEventSource = null;
+                if (evt.detail === 'Completed' || evt.detail === 'GenerationComplete') {
+                    if (__isAdmin) appendGenLog('[AUTO-FIX] Fix complete, redeploying...', '#4ec9b0');
+                    // Re-deploy after fix
+                    (async () => {
+                        const res = await fetch(`/api/clarify/${clarifySessionId}`);
+                        if (res.ok) { showClarifyDeploySection(await res.json()); }
+                        const deployRes = await fetch(`/api/clarify/${clarifySessionId}/deploy/azure`, { method: 'POST' });
+                        const text = await deployRes.text();
+                        try { const data = JSON.parse(text); showClarifyDeploySection(data); } catch {}
+                        startAutoDeployPolling();
+                    })();
+                } else {
+                    if (__isAdmin) appendGenLog('[AUTO-FIX] Fix failed: ' + (evt.error || ''), '#f44747');
+                }
+                return;
+            }
+            if (evt.type === 'CopilotSdkRequest') {
+                try { clarifyPremiumRequests.push({ ...JSON.parse(evt.detail), timestamp: evt.timestamp }); } catch {}
+                return;
+            }
+            {
+                const prefix = evt.type === 'ToolStarted' ? '[TOOL] '
+                    : evt.type === 'ToolCompleted' ? '[DONE] '
+                    : evt.type === 'Error' ? '[ERR]  '
+                    : '[' + evt.type + '] ';
+                const color = evt.type === 'Error' ? '#f44747'
+                    : evt.type === 'ToolStarted' ? '#569cd6'
+                    : evt.type === 'ToolCompleted' ? '#4ec9b0'
+                    : '#d4d4d4';
+                appendGenLog(prefix + (evt.detail || ''), color);
+            }
+        } catch {}
+    };
+
+    clarifyEventSource.onerror = function() {
+        clarifyEventSource.close();
+        clarifyEventSource = null;
+        // Check status and retry if needed
+        (async () => {
+            try {
+                const res = await fetch(`/api/clarify/${clarifySessionId}`);
+                const session = await res.json();
+                if (session.status === 'GenerationComplete' || session.status === 'Deployed') {
+                    showClarifyDeploySection(session);
+                    if (session.status !== 'Deployed') {
+                        const deployRes = await fetch(`/api/clarify/${clarifySessionId}/deploy/azure`, { method: 'POST' });
+                        const text = await deployRes.text();
+                        try { const data = JSON.parse(text); showClarifyDeploySection(data); } catch {}
+                        startAutoDeployPolling();
+                    }
+                }
+            } catch {}
+        })();
+    };
+}
+
+async function clarifyTeardown() {
+    if (!clarifySessionId || !confirm('Tear down the deployment? The solution files will remain.')) return;
+    showClarifyLoading(true, 'Tearing down...');
+    try {
+        const res = await fetch(`/api/clarify/${clarifySessionId}/teardown`, { method: 'POST' });
+        const data = await res.json();
+        showClarifyDeploySection(data.session);
+        showToast('Deployment torn down', 'success');
+    } catch(e) { showToast('Error: ' + e.message, 'danger'); }
+    finally { showClarifyLoading(false); }
+}
+
+async function pasteFromClipboard() {
+    try {
+        const items = await navigator.clipboard.read();
+        let addedImages = false;
+        for (const item of items) {
+            const imageType = item.types.find(t => t.startsWith('image/'));
+            if (imageType) {
+                const blob = await item.getType(imageType);
+                clipboardImages.push(new File([blob], `clipboard-${Date.now()}.png`, { type: imageType }));
+                addedImages = true;
+            }
+        }
+        if (addedImages) { renderClipboardPreviews(); return; }
+        const text = await navigator.clipboard.readText();
+        if (text) {
+            const ta = document.getElementById('improveInstruction');
+            ta.value = ta.value ? ta.value + '\n' + text : text;
+            ta.focus();
+        }
+    } catch {
+        showToast('Clipboard access denied by browser', 'warning');
+    }
+}
+
+function handleImproveAreaPaste(event) {
+    const items = event.clipboardData?.items;
+    if (!items) return;
+    let hasImage = false;
+    for (const item of items) {
+        if (item.type.startsWith('image/')) {
+            hasImage = true;
+            const file = item.getAsFile();
+            if (file) clipboardImages.push(new File([file], `clipboard-${Date.now()}.png`, { type: file.type }));
+        }
+    }
+    if (hasImage) { event.preventDefault(); renderClipboardPreviews(); }
+}
+
+function renderClipboardPreviews() {
+    const container = document.getElementById('clipboardImagesPreview');
+    if (clipboardImages.length === 0) { container.classList.add('d-none'); container.innerHTML = ''; return; }
+    container.classList.remove('d-none');
+    container.innerHTML = clipboardImages.map((f, i) => {
+        const url = URL.createObjectURL(f);
+        return `<div class="position-relative d-inline-block me-2 mb-1">
+            <img src="${url}" class="rounded border" style="height:72px;max-width:120px;object-fit:cover" title="${f.name}"/>
+            <button type="button" class="btn-close position-absolute top-0 end-0 bg-white rounded-circle" style="font-size:.6rem;padding:2px" onclick="removeClipboardImage(${i})"></button>
+        </div>`;
+    }).join('');
+}
+
+function removeClipboardImage(idx) {
+    clipboardImages.splice(idx, 1);
+    renderClipboardPreviews();
+}
+
+async function pasteIdeaFromClipboard() {
+    try {
+        const items = await navigator.clipboard.read();
+        let addedImages = false;
+        for (const item of items) {
+            const imageType = item.types.find(t => t.startsWith('image/'));
+            if (imageType) {
+                const blob = await item.getType(imageType);
+                clipboardIdeaImages.push(new File([blob], `clipboard-${Date.now()}.png`, { type: imageType }));
+                addedImages = true;
+            }
+        }
+        if (addedImages) { renderIdeaClipboardPreviews(); return; }
+        const text = await navigator.clipboard.readText();
+        if (text) {
+            const ta = document.getElementById('ideaDescription');
+            ta.value = ta.value ? ta.value + '\n' + text : text;
+            ta.focus();
+        }
+    } catch {
+        showToast('Clipboard access denied by browser', 'warning');
+    }
+}
+
+function handleIdeaAreaPaste(event) {
+    const items = event.clipboardData?.items;
+    if (!items) return;
+    let hasImage = false;
+    for (const item of items) {
+        if (item.type.startsWith('image/')) {
+            hasImage = true;
+            const file = item.getAsFile();
+            if (file) clipboardIdeaImages.push(new File([file], `clipboard-${Date.now()}.png`, { type: file.type }));
+        }
+    }
+    if (hasImage) { event.preventDefault(); renderIdeaClipboardPreviews(); }
+}
+
+function renderIdeaClipboardPreviews() {
+    const container = document.getElementById('ideaClipboardPreview');
+    if (clipboardIdeaImages.length === 0) { container.classList.add('d-none'); container.innerHTML = ''; return; }
+    container.classList.remove('d-none');
+    container.innerHTML = clipboardIdeaImages.map((f, i) => {
+        const url = URL.createObjectURL(f);
+        return `<div class="position-relative d-inline-block me-2 mb-1">
+            <img src="${url}" class="rounded border" style="height:72px;max-width:120px;object-fit:cover" title="${f.name}"/>
+            <button type="button" class="btn-close position-absolute top-0 end-0 bg-white rounded-circle" style="font-size:.6rem;padding:2px" onclick="removeIdeaClipboardImage(${i})"></button>
+        </div>`;
+    }).join('');
+}
+
+function removeIdeaClipboardImage(idx) {
+    clipboardIdeaImages.splice(idx, 1);
+    renderIdeaClipboardPreviews();
+}
+
+document.getElementById('ideaAttachments')?.addEventListener('change', function() {
+    const preview = document.getElementById('ideaAttachmentsPreview');
+    if (!this.files?.length) { preview.classList.add('d-none'); preview.innerHTML = ''; return; }
+    preview.classList.remove('d-none');
+    preview.innerHTML = Array.from(this.files).map(f => {
+        if (f.type.startsWith('image/')) {
+            const url = URL.createObjectURL(f);
+            return `<div class="d-inline-block me-2 mb-1">
+                <img src="${url}" class="rounded border" style="height:72px;max-width:120px;object-fit:cover" title="${f.name}"/>
+            </div>`;
+        }
+        return `<span class="badge bg-secondary me-1 mb-1"><i class="bi bi-file-earmark me-1"></i>${f.name}</span>`;
+    }).join('');
+});
+
+async function clarifyImprove() {
+    if (!clarifySessionId) return;
+    const instruction = document.getElementById('improveInstruction').value.trim();
+    if (!instruction) { showToast('Please describe what to improve', 'warning'); return; }
+
+    // Upload context files first if any
+    const filesInput = document.getElementById('improveAttachments');
+    let attachmentPaths = [];
+    if (filesInput?.files?.length > 0 || clipboardImages.length > 0) {
+        const formData = new FormData();
+        for (const file of (filesInput?.files || [])) formData.append('files', file);
+        for (const file of clipboardImages) formData.append('files', file);
+        try {
+            const uploadRes = await fetch(`/api/clarify/${clarifySessionId}/upload-context`, {
+                method: 'POST',
+                body: formData
+            });
+            if (uploadRes.ok) {
+                const uploaded = await uploadRes.json();
+                attachmentPaths = uploaded.paths || [];
+            }
+        } catch(e) { /* continue without attachments */ }
+        clipboardImages = [];
+        renderClipboardPreviews();
+    }
+
+    hideAllClarify();
+    document.getElementById('genPipeline').classList.remove('d-none');
+    document.getElementById('genLogPanel').classList.remove('d-none');
+    document.getElementById('genLogContent').innerHTML = '';
+    document.getElementById('genPipelineStatus').classList.remove('d-none');
+    document.getElementById('genPipelineStatus').textContent = 'Applying improvements...';
+    appendGenLog('[IMPROVE] ' + instruction, '#dcdcaa');
+    if (attachmentPaths.length > 0) appendGenLog(`[ATTACH] ${attachmentPaths.length} file(s) included`, '#569cd6');
+
+    try {
+        const res = await fetch(`/api/clarify/${clarifySessionId}/improve`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ instruction, attachmentPaths: attachmentPaths.length > 0 ? attachmentPaths : undefined, model: getImproveModelId() || undefined, provider: getCodegenProvider() || undefined, reasoningEffort: getImproveReasoning() || undefined })
+        });
+        if (!res.ok) {
+            const data = await res.json();
+            showToast(data.error || 'Improve request failed', 'danger');
+            failClarifyPipeline();
+            return;
+        }
+        saveClarifyActiveSession();
+        connectClarifyStream();
+    } catch(e) {
+        showToast('Error: ' + e.message, 'danger');
+        failClarifyPipeline();
+    }
+}
+
+// -- Deployments Section --
+async function loadDeployments() {
+    try {
+        const res = await fetch('/api/executor/deployments');
+        const items = await res.json();
+        const section = document.getElementById('deploymentsSection');
+        const list = document.getElementById('deploymentsList');
+        const count = document.getElementById('deploymentsCount');
+        if (!items.length) { section.classList.add('d-none'); return; }
+        section.classList.remove('d-none');
+        count.textContent = items.length;
+        list.innerHTML = items.map(d => {
+            const statusColors = {
+                'Implementing': 'bg-warning text-dark',
+                'AwaitingApproval': 'bg-info text-dark',
+                'Deploying': 'bg-primary',
+                'Deployed': 'bg-success',
+                'DeployFailed': 'bg-danger'
+            };
+            const badge = statusColors[d.status] || 'bg-secondary';
+            const liveLink = d.deployedUrl
+                ? `<a href="${d.deployedUrl}" target="_blank" class="btn btn-sm btn-outline-success"><i class="bi bi-box-arrow-up-right me-1"></i>Visit</a>`
+                : '';
+            const teardownBtn = d.status === 'Deployed'
+                ? `<button class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" title="Remove the deployed app from hosting. Source code is preserved." onclick="deleteAction('/api/executor/teardown/${d.Id}', 'Tear down this deployed app? Code will be preserved.')">Teardown</button>`
+                : '';
+            const deleteBtn = d.solutionPath
+                ? `<button class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" title="Delete the GitHub repo and local solution folder permanently." onclick="deleteAction('/api/executor/solution/${d.Id}', 'Delete repo &amp; local code? Cannot be undone.')"><i class="bi bi-trash me-1"></i>Delete</button>`
+                : '';
+            return `<div class="d-flex justify-content-between align-items-center border-bottom py-2 px-2">
+                <div>
+                    <span class="badge ${badge} me-2">${d.status}</span>
+                    <span class="fw-semibold small">${d.title}</span>
+                </div>
+                <div class="d-flex gap-1">${liveLink}${teardownBtn}${deleteBtn}</div>
+            </div>`;
+        }).join('');
+        // Re-init tooltips for new elements
+        list.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+    } catch(e) { /* silent */ }
+}
+loadDeployments();
+
+// -- Archive Expiry Notifications --
+async function loadArchiveNotifications() {
+    if (__isAdmin) return;
+    try {
+        const res = await fetch('/api/clarify/archive-notifications');
+        if (!res.ok) return;
+        const items = await res.json();
+        const container = document.getElementById('archiveNotifications');
+        const dismissed = JSON.parse(localStorage.getItem('aitk_dismissed_archive_notifs') || '{}');
+        const now = Date.now();
+        // Clean expired dismissals (older than 24h)
+        for (const [k, v] of Object.entries(dismissed)) {
+            if (now - v > 86400000) delete dismissed[k];
+        }
+        localStorage.setItem('aitk_dismissed_archive_notifs', JSON.stringify(dismissed));
+
+        const visible = items.filter(n => !dismissed[n.sessionId]);
+        if (!visible.length) { container.innerHTML = ''; return; }
+
+        container.innerHTML = visible.map(n => {
+            const icon = n.reason === 'hosting_grace'
+                ? '<i class="bi bi-clock-history me-2"></i>'
+                : '<i class="bi bi-exclamation-triangle me-2"></i>';
+            const daysText = n.daysRemaining <= 0
+                ? 'today'
+                : n.daysRemaining === 1 ? 'tomorrow' : `in ${n.daysRemaining} days`;
+            const msg = n.reason === 'hosting_grace'
+                ? `Hosting for <strong>${n.title}</strong> has ended. Source code will be deleted ${daysText}.`
+                : `Source code for <strong>${n.title}</strong> will be deleted ${daysText}. Download it before it expires.`;
+            const cls = n.daysRemaining <= 1 ? 'alert-danger' : 'alert-warning';
+            return `<div class="alert ${cls} alert-dismissible fade show d-flex align-items-center py-2 mb-2" role="alert" data-notif-session="${n.sessionId}">
+                ${icon}<div class="small flex-grow-1">${msg}</div>
+                <button type="button" class="btn-close" aria-label="Close" onclick="dismissArchiveNotif('${n.sessionId}')"></button>
+            </div>`;
+        }).join('');
+    } catch { /* silent */ }
+}
+
+function dismissArchiveNotif(sessionId) {
+    const dismissed = JSON.parse(localStorage.getItem('aitk_dismissed_archive_notifs') || '{}');
+    dismissed[sessionId] = Date.now();
+    localStorage.setItem('aitk_dismissed_archive_notifs', JSON.stringify(dismissed));
+    const el = document.querySelector(`[data-notif-session="${sessionId}"]`);
+    if (el) el.remove();
+}
+
+loadArchiveNotifications();
+</script>

@@ -1,0 +1,14 @@
+## Deployment Target: Azure (via Azure Developer CLI)
+
+This application will be deployed to Azure using `azd up`.
+IaC files (azure.yaml, infra/, azure-pipelines.yml) are auto-scaffolded AFTER code generation.
+Do NOT create azure.yaml, infra/, or azure-pipelines.yml during code generation — the system generates them automatically.
+
+YOU decide the architecture and tech stack. When server-side code is needed, prefer C# / ASP.NET Core.
+Use free tier / minimal-cost Azure resources.
+
+FILE STRUCTURE:
+- ALL application code goes inside the `site/` subfolder — NEVER at the root
+- Do NOT create or modify azure.yaml, infra/, or azure-pipelines.yml — they are auto-scaffolded
+- For Vite/React projects: the build output MUST go to `site/dist/` (Vite default)
+- For .NET projects: the publish output is handled by `dotnet publish`

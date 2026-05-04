@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ImagineWeb.Api/ImagineWeb.Api.csproj" />
+    <Project Path="src/ImagineWeb.Core/ImagineWeb.Core.csproj" />
+    <Project Path="src/ImagineWeb.Infrastructure/ImagineWeb.Infrastructure.csproj" />
+  </Folder>
+</Solution>

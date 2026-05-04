@@ -1,0 +1,134 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning",
+      "Microsoft.EntityFrameworkCore": "Warning",
+      "System.Net.Http.HttpClient": "Warning"
+    }
+  },
+  "AllowedHosts": "*",
+
+  "Hunter": {
+    "SeedTopics": [
+      "passive income ideas 2026",
+      "best side hustles from home",
+      "AI tools for small business"
+    ],
+    "MaxScraperThreads": 5,
+    "SearchWorkerCount": 2,
+    "MaxAnalysisConcurrency": 2,
+    "AnalysisQueueCapacity": 50,
+    "MaxContentChars": 16000,
+    "PerDomainDelayMs": 2000,
+    "MaxDepth": 2,
+    "DeepDiveThreshold": 8,
+    "Phase2Threshold": 7,
+    "CrossPageBatchSize": 10,
+    "MaxPagesPerSession": 1000,
+    "StrategySummaryInterval": 20,
+    "UserAgent": "ImagineWeb/1.0 (Research Bot)",
+    "PreScreenTopN": 5,
+    "BlockedDomains": [
+      "facebook.com", "instagram.com", "twitter.com", "x.com",
+      "tiktok.com", "youtube.com", "linkedin.com", "pinterest.com",
+      "accounts.google.com", "login.microsoftonline.com",
+      "play.google.com", "apps.apple.com"
+    ]
+  },
+
+  "Analysis": {
+    "Provider": "Ollama"
+  },
+
+  "Ollama": {
+    "BaseUrl": "http://localhost:11434",
+    "Model": "qwen3:14b",
+    "Temperature": 0.3,
+    "TimeoutSeconds": 1800,
+    "CircuitBreakerThreshold": 3,
+    "CircuitBreakerCooldownSeconds": 60,
+    "NumPredict": 8192,
+    "NumCtx": 32768,
+    "KeepAlive": "30m"
+  },
+
+  "OpenAi": {
+    "ApiKey": "",
+    "Model": "gpt-4o-mini",
+    "SecondaryModel": "gpt-4o-mini",
+    "BaseUrl": "",
+    "Temperature": 0.3,
+    "TimeoutSeconds": 180,
+    "MaxOutputTokens": 8192,
+    "MaxConcurrentRequests": 4,
+    "ContextWindowTokens": 128000
+  },
+
+  "Anthropic": {
+    "ApiKey": "",
+    "Model": "claude-sonnet-4-5",
+    "SecondaryModel": "claude-haiku-4-5",
+    "Temperature": 0.3,
+    "TimeoutSeconds": 180,
+    "MaxOutputTokens": 8192,
+    "MaxConcurrentRequests": 4,
+    "ContextWindowTokens": 200000
+  },
+
+  "Search": {
+    "SearXngBaseUrl": "http://localhost:8888",
+    "SearxngPath": "",
+    "SearxngWslDistro": "Ubuntu"
+  },
+
+  "CopilotSdkAnalysis": {
+    "Model": "gpt-4o",
+    "ReasoningEffort": "medium",
+    "MaxConcurrentRequests": 2,
+    "TimeoutSeconds": 300,
+    "GitHubToken": "",
+    "CopilotCliPath": ""
+  },
+
+  "Executor": {
+    "GitHubUsername": "",
+    "SolutionsBasePath": "solutions"
+  },
+
+  "AzureDeployment": {
+    "TenantId": "",
+    "ClientId": "",
+    "ClientSecret": "",
+    "DefaultRegion": "westeurope",
+    "PreferFreeTier": true,
+    "ExcludedSubscriptionIds": []
+  },
+
+  "CodeGenerator": {
+    "Provider": "copilotSdk",
+    "FallbackEnabled": true,
+    "Model": "",
+    "ReasoningEffort": "high",
+    "TimeoutSeconds": 2400,
+    "AutoAllowTools": true,
+    "GitHubToken": "",
+    "CopilotCliPath": ""
+  },
+
+  "AzureDevOps": {
+    "OrganizationUrl": "",
+    "PersonalAccessToken": "",
+    "ProjectName": "",
+    "DefaultBranch": "main",
+    "PipelineTimeoutMinutes": 15,
+    "PipelinePollIntervalSeconds": 10
+  },
+
+  "BlobStorage": {
+    "Enabled": false,
+    "AccountName": "",
+    "ContainerName": "solutions",
+    "ArchiveRetentionDays": 30
+  }
+}

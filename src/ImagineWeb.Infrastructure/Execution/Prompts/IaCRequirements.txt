@@ -1,0 +1,10 @@
+## Infrastructure as Code
+
+IaC files (azure.yaml, infra/main.bicep, infra/resources.bicep, azure-pipelines.yml) are
+auto-scaffolded based on detected resources in site/. Do NOT create or modify these files during code generation.
+
+If the application needs additional Azure resources (e.g. storage, database, cache),
+mention them in a comment at the top of the main entry point file so they can be
+detected and added to the Bicep templates automatically.
+
+Focus only on application code in site/.

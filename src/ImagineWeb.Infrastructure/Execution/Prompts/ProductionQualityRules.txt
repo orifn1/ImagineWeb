@@ -1,0 +1,33 @@
+## Production-Ready Site Requirements — NON-NEGOTIABLE
+
+### Responsive Design
+- Mobile-first approach: the site MUST look professional on phones, tablets, and desktops
+- Include `<meta name="viewport" content="width=device-width, initial-scale=1.0">` in every HTML page
+- Use CSS flexbox/grid with responsive breakpoints — no fixed pixel widths on containers
+- All interactive elements (buttons, links, forms) must be touch-friendly (min 44×44px tap targets)
+
+### SEO & Discoverability
+- Every page MUST have: unique `<title>`, `<meta name="description">`, Open Graph tags (og:title, og:description, og:image)
+- Include structured data (JSON-LD) for the primary content type (Article, Product, FAQTool, etc.)
+- Generate a `sitemap.xml` and `robots.txt` in the site root
+- Use semantic HTML: `<header>`, `<main>`, `<article>`, `<footer>`, `<nav>`, `<section>` — not just `<div>`
+- All images must have descriptive `alt` attributes
+
+### Accessibility (WCAG 2.1 AA basics)
+- Semantic HTML over `<div>` soup
+- All form inputs must have associated `<label>` elements
+- Color contrast ratio ≥ 4.5:1 for body text, ≥ 3:1 for large text
+- Keyboard navigable: visible focus indicators, logical tab order
+- ARIA attributes only where semantic HTML is insufficient
+
+### Professional UI / UX
+- Consistent design system: unified color palette, typography scale, spacing rhythm
+- Proper loading states for async operations (skeleton loaders or spinners, not blank screens)
+- User-friendly error states with actionable messages
+- Favicon (generate a simple SVG favicon with `<link rel="icon" type="image/svg+xml">`)
+- Footer with copyright year, privacy policy link placeholder, and contact/about link
+
+### Legal & Trust
+- Include a privacy policy page (even a template) with link in footer
+- If using cookies/analytics: add a cookie consent banner placeholder
+- Terms of service link placeholder in footer
