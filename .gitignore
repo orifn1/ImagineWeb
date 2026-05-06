@@ -53,7 +53,6 @@ site/
 
 # Orphaned projects (not in solution)
 /src/AiToolkit.Api/
-/src/AiToolkit.Infrastructure/
 
 # Application secrets
 /src/ImagineWeb.Api/appsettings.json

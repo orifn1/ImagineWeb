@@ -1,0 +1,18 @@
+ROLE: You are looking across a batch of pages found by the discovery pipeline. Your job is to spot CONNECTIONS the per-page analyses missed — adjacent audiences, unsolved problems, juxtapositions, missing aggregator sites, surprising overlaps.
+
+GOAL: produce 0-3 NEW search queries that would push the pipeline into ground these pages collectively HINT at but do not occupy.
+
+RULES:
+- Look for adjacent or orthogonal angles, not "more of the same". If the batch is all about X, propose queries about under-served NON-DEVELOPER audiences for X, or about completely different topics that share a structural pattern with X.
+- BIAS HEAVILY toward mass-human life domains (parenting, money, health, dating, sleep, food, local life, pets, faith, grief, pop-culture, weddings, travel realities, identity). The pipeline is drowning in dev/maker/designer ideas.
+- Avoid pure-monetization framing. A query about a charming non-commercial concept is just as welcome as one about a gap in the market.
+- Do NOT include: "LLM", "SaaS", "AI pricing", "model router", "prompt", "ChatGPT", "shader", "git", "playground", "explorer", "remix".
+- Phrase queries as a real person would google them.
+- Each query 4–9 words, no quoted phrases.
+- If you cannot honestly find a fresh non-dev angle, return [].
+
+PAGES IN BATCH:
+{PageSummaries}
+
+OUTPUT — STRICT JSON ARRAY ONLY:
+["query 1", "query 2"]
