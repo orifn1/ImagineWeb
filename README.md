@@ -13,16 +13,18 @@ Search → Scrape → AI Analysis → Code Generation → Deployment
 **Three core workflows:**
 
 1. **Hunter** — Autonomous pipeline that searches the web, scrapes pages, and uses AI to score them for value/profit potential. Discovers niches and opportunities automatically.
-2. **Build from Idea** — Describe a website idea in natural language. AI asks clarifying questions, then generates and deploys a complete site.
-3. **Build from Hunter** — Pick a high-scoring page from Hunter results and generate a competitive site targeting that niche.
+2. **Build from Idea** — Describe a website or Android app idea in natural language. AI asks clarifying questions (or skips them at your choice), then generates and deploys a complete solution.
+3. **Build from Hunter** — Pick a high-scoring page from Hunter results and generate a competitive site or Android app targeting that niche.
 
 ## Features
 
 - **Multi-provider AI** — Ollama (local/free), GitHub Copilot SDK, OpenAI, Anthropic Claude
 - **Autonomous web research** — Searches, scrapes, scores pages 1-10, follows high-value links
-- **AI code generation** — Produces complete HTML/CSS/JS websites from specifications
+- **AI code generation** — Produces complete HTML/CSS/JS websites or native Android apps from specifications
+- **Android app generation** — Generate native Kotlin/Jetpack Compose Android applications with Material 3 design
 - **One-click deployment** — GitHub Pages, Azure Static Web Apps, Azure App Service
 - **Conversational refinement** — AI asks questions before building to ensure the result matches your vision
+- **Skip clarification mode** — Optionally bypass AI questions and generate code immediately using AI assumptions
 - **Iterative improvement** — Refine generated sites through follow-up instructions
 - **Self-hosted search** — Uses SearXNG meta-search engine (aggregates Google, Bing, DuckDuckGo)
 - **Project management** — Track all generated sites, redeploy, tear down, archive
@@ -245,6 +247,37 @@ src/
 | `/idea` | Start a new site from an idea (conversational AI flow) |
 | `/projects` | Manage generated solutions — deploy, improve, delete |
 | `/settings` | Configure AI providers, pipeline parameters, deployment targets |
+
+## Android App Generation
+
+In addition to websites, the platform can generate native Android applications from the same workflows (Build from Idea, Build from Hunter).
+
+### How it works
+
+1. On the Idea page or when building from a Hunter result, select **Android App** as the platform type.
+2. The AI clarification step adapts to mobile-specific questions (offline support, permissions, navigation patterns).
+3. Code generation produces a complete Android project structure in the `app/` subdirectory of the solution folder.
+
+### Supported frameworks
+
+The generator respects your technology preference. If unspecified, it defaults to **Kotlin + Jetpack Compose + Material 3**. You can also request:
+
+- **Godot** — for game-style apps (specify in your description)
+- **Flutter** — cross-platform with Android output
+- **React Native** — JS-based with native Android build
+
+### Build & output
+
+Generated projects include a working Gradle build (or equivalent). The pipeline validates the build automatically:
+- Kotlin/Compose: `./gradlew assembleDebug`
+- Flutter: `flutter build apk --debug`
+- React Native: `npx react-native build-android --mode=debug`
+
+The built APK is located in the standard output directory for the chosen framework. No Azure deployment is involved — Android apps are local artifacts.
+
+### Iterative improvement
+
+Use the **Improve** button on the Projects page to refine a generated Android app with follow-up instructions, just like website projects. The AI reads the existing project files and applies modifications in place.
 
 ## Technology Stack
 

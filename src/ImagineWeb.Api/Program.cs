@@ -39,6 +39,41 @@ using (var scope = app.Services.CreateScope())
     await DatabaseMigrator.MigrateAsync(db, app.Logger);
 }
 
+// ── Migrate existing solutions to Azure/ subfolder ────────────
+{
+    var solBase = builder.Configuration["Executor:SolutionsBasePath"]!;
+    var azureDir = Path.Combine(solBase, "Azure");
+    if (!Directory.Exists(azureDir))
+        Directory.CreateDirectory(azureDir);
+
+    var androidDir = Path.Combine(solBase, "Android");
+    if (!Directory.Exists(androidDir))
+        Directory.CreateDirectory(androidDir);
+
+    // Move clarify-* dirs and zips from root to Azure/
+    if (Directory.Exists(solBase))
+    {
+        foreach (var dir in Directory.GetDirectories(solBase, "clarify-*"))
+        {
+            var dest = Path.Combine(azureDir, Path.GetFileName(dir));
+            if (!Directory.Exists(dest))
+            {
+                Directory.Move(dir, dest);
+                app.Logger.LogInformation("Migrated solution folder {Source} → {Dest}", dir, dest);
+            }
+        }
+        foreach (var zip in Directory.GetFiles(solBase, "clarify-*.zip"))
+        {
+            var dest = Path.Combine(azureDir, Path.GetFileName(zip));
+            if (!File.Exists(dest))
+            {
+                File.Move(zip, dest);
+                app.Logger.LogInformation("Migrated solution archive {Source} → {Dest}", zip, dest);
+            }
+        }
+    }
+}
+
 // ── Shutdown: Ctrl+C handler ──────────────────────────────────
 var shutdownManager = app.Services.GetRequiredService<ShutdownManager>();
 Console.CancelKeyPress += (_, e) =>

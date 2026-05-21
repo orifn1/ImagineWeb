@@ -332,16 +332,17 @@ public sealed class CopilotSdkCodeGenerator : ICodeGenerator, IAsyncDisposable
                     }
                     } // end !IsImprovement
 
-                    // Check if site/ has any application files before proceeding to IaC
-                    var siteDir = Path.Combine(request.WorkingDirectory, "site");
+                    // Check if site/ (or app/ for Android) has any application files before proceeding to validation
+                    var codeSubDir = request.PlatformType == PlatformType.Android ? "app" : "site";
+                    var siteDir = Path.Combine(request.WorkingDirectory, codeSubDir);
                     var hasSiteFiles = Directory.Exists(siteDir)
                         && Directory.EnumerateFiles(siteDir, "*", SearchOption.AllDirectories).Any();
 
                     if (!hasSiteFiles)
                     {
                         _logger.LogWarning(
-                            "Generation {Id}: no application files produced in site/ after all attempts",
-                            generationId);
+                            "Generation {Id}: no application files produced in {SubDir}/ after all attempts",
+                            generationId, codeSubDir);
                         status.Events.Add(new CodeGenerationEvent
                         {
                             Type = CodeGenerationEventType.Error,
@@ -355,7 +356,7 @@ public sealed class CopilotSdkCodeGenerator : ICodeGenerator, IAsyncDisposable
                         return;
                     }
 
-                    await RunConsolidatedValidationAsync(status, generationId, request.WorkingDirectory, request.IsImprovement, activeFixSession, activeFixIdleSignal, idleTimeout, effectiveFixModel);
+                    await RunConsolidatedValidationAsync(status, generationId, request.WorkingDirectory, request.IsImprovement, activeFixSession, activeFixIdleSignal, idleTimeout, effectiveFixModel, request.PlatformType);
 
                     status.State = CodeGenerationState.Completed;
                     status.CompletedAt = DateTime.UtcNow;
@@ -765,9 +766,164 @@ public sealed class CopilotSdkCodeGenerator : ICodeGenerator, IAsyncDisposable
         CopilotSession? fixSession,
         Channel<bool>? idleSignal,
         TimeSpan idleTimeout,
-        string? fixModel = null)
+        string? fixModel = null,
+        PlatformType platformType = PlatformType.Website)
     {
         var issues = new List<string>();
+
+        // Android apps skip Azure-specific validation (IaC, Bicep, site checks)
+        if (platformType == PlatformType.Android)
+        {
+            var appDir = Path.Combine(workingDirectory, "app");
+            if (Directory.Exists(appDir))
+            {
+                // Detect project type and validate accordingly
+                var gradlew = Path.Combine(appDir, "gradlew");
+                var gradlewBat = Path.Combine(appDir, "gradlew.bat");
+                var godotProject = Directory.EnumerateFiles(appDir, "project.godot", SearchOption.AllDirectories).FirstOrDefault();
+                var pubspecYaml = Path.Combine(appDir, "pubspec.yaml");
+                var packageJson = Path.Combine(appDir, "package.json");
+
+                if (File.Exists(gradlew) || File.Exists(gradlewBat))
+                {
+                    // Gradle-based project (Kotlin/Compose, React Native, etc.)
+                    var androidBuildErrors = await TryBuildAsync(
+                        File.Exists(gradlewBat) ? gradlewBat : gradlew,
+                        "assembleDebug --no-daemon -q",
+                        generationId, "gradlew assembleDebug",
+                        workingDir: appDir);
+
+                    if (androidBuildErrors is not null)
+                    {
+                        issues.Add($"Android build failed:\n```\n{androidBuildErrors}\n```");
+                        status.Events.Add(new CodeGenerationEvent
+                        {
+                            Type = CodeGenerationEventType.SiteBuildAttempt,
+                            Detail = $"Android build failed: {(androidBuildErrors.Length > 500 ? androidBuildErrors[..500] + "..." : androidBuildErrors)}"
+                        });
+                    }
+                    else
+                    {
+                        status.Events.Add(new CodeGenerationEvent
+                        {
+                            Type = CodeGenerationEventType.SiteBuildAttempt,
+                            Detail = "Android build succeeded (assembleDebug)"
+                        });
+                    }
+                }
+                else if (godotProject is not null)
+                {
+                    // Godot project — validate project structure
+                    var missingParts = new List<string>();
+                    var godotDir = Path.GetDirectoryName(godotProject)!;
+                    if (!Directory.EnumerateFiles(godotDir, "*.tscn", SearchOption.AllDirectories).Any()
+                        && !Directory.EnumerateFiles(godotDir, "*.scn", SearchOption.AllDirectories).Any())
+                        missingParts.Add("No scene files (.tscn/.scn) found");
+                    if (!Directory.EnumerateFiles(godotDir, "*.gd", SearchOption.AllDirectories).Any()
+                        && !Directory.EnumerateFiles(godotDir, "*.cs", SearchOption.AllDirectories).Any())
+                        missingParts.Add("No script files (.gd/.cs) found");
+
+                    if (missingParts.Count > 0)
+                    {
+                        issues.Add($"Godot project validation issues:\n- {string.Join("\n- ", missingParts)}");
+                        status.Events.Add(new CodeGenerationEvent
+                        {
+                            Type = CodeGenerationEventType.SiteBuildAttempt,
+                            Detail = $"Godot project incomplete: {string.Join("; ", missingParts)}"
+                        });
+                    }
+                    else
+                    {
+                        status.Events.Add(new CodeGenerationEvent
+                        {
+                            Type = CodeGenerationEventType.SiteBuildAttempt,
+                            Detail = "Godot project structure validated (project.godot + scenes + scripts present)"
+                        });
+                    }
+                }
+                else if (File.Exists(pubspecYaml))
+                {
+                    // Flutter project
+                    var flutterBuildErrors = await TryBuildAsync(
+                        "flutter", "build apk --debug",
+                        generationId, "flutter build apk",
+                        workingDir: appDir);
+
+                    if (flutterBuildErrors is not null)
+                    {
+                        issues.Add($"Flutter build failed:\n```\n{flutterBuildErrors}\n```");
+                        status.Events.Add(new CodeGenerationEvent
+                        {
+                            Type = CodeGenerationEventType.SiteBuildAttempt,
+                            Detail = $"Flutter build failed: {(flutterBuildErrors.Length > 500 ? flutterBuildErrors[..500] + "..." : flutterBuildErrors)}"
+                        });
+                    }
+                    else
+                    {
+                        status.Events.Add(new CodeGenerationEvent
+                        {
+                            Type = CodeGenerationEventType.SiteBuildAttempt,
+                            Detail = "Flutter build succeeded"
+                        });
+                    }
+                }
+                else if (File.Exists(packageJson))
+                {
+                    // React Native or similar JS-based project
+                    status.Events.Add(new CodeGenerationEvent
+                    {
+                        Type = CodeGenerationEventType.SiteBuildAttempt,
+                        Detail = "JS-based Android project detected (package.json). Build validation deferred to LLM self-validation."
+                    });
+                }
+                else
+                {
+                    // Unknown project type — don't force Gradle, just warn
+                    _logger.LogWarning("Android project in {Dir} has no recognized build system (Gradle/Godot/Flutter/package.json)", appDir);
+                    status.Events.Add(new CodeGenerationEvent
+                    {
+                        Type = CodeGenerationEventType.SiteBuildAttempt,
+                        Detail = "No recognized build system detected. Build validation deferred to LLM self-validation."
+                    });
+                }
+            }
+            else
+            {
+                issues.Add("No app/ directory found. All Android application code must be inside the app/ directory.");
+            }
+
+            // Send combined fix if needed
+            if (issues.Count > 0 && fixSession is not null && idleSignal is not null)
+            {
+                var fixPrompt = PromptSections.CombinedFixPrompt(workingDirectory, issues);
+                status.Events.Add(new CodeGenerationEvent
+                {
+                    Type = CodeGenerationEventType.Validation,
+                    Detail = $"Found {issues.Count} post-generation issue(s): {string.Join("; ", issues)}"
+                });
+                status.Events.Add(new CodeGenerationEvent
+                {
+                    Type = CodeGenerationEventType.CopilotSdkRequest,
+                    Detail = $"{{\"model\":\"{fixModel ?? status.Model}\",\"requestType\":\"CombinedFix\",\"issueCount\":{issues.Count}}}"
+                });
+                try
+                {
+                    var fixAttachments = new List<UserMessageAttachment>
+                    {
+                        new UserMessageAttachmentDirectory { Path = workingDirectory, DisplayName = "output" }
+                    };
+                    await fixSession.SendAsync(new MessageOptions { Prompt = fixPrompt, Attachments = fixAttachments });
+                    using var cts = new CancellationTokenSource(idleTimeout);
+                    await idleSignal.Reader.ReadAsync(cts.Token);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Android combined fix failed for {Id}", generationId);
+                }
+            }
+            return;
+        }
+
         var siteDir = Path.Combine(workingDirectory, "site");
         var mainBicep = Path.Combine(workingDirectory, "infra", "main.bicep");
 
@@ -1282,7 +1438,7 @@ public sealed class CopilotSdkCodeGenerator : ICodeGenerator, IAsyncDisposable
         }
     }
 
-    private async Task<string?> TryBuildAsync(string command, string arguments, string generationId, string label)
+    private async Task<string?> TryBuildAsync(string command, string arguments, string generationId, string label, string? workingDir = null)
     {
         try
         {
@@ -1309,6 +1465,9 @@ public sealed class CopilotSdkCodeGenerator : ICodeGenerator, IAsyncDisposable
                     UseShellExecute = false,
                     CreateNoWindow = true
                 };
+
+            if (!string.IsNullOrEmpty(workingDir))
+                process.StartInfo.WorkingDirectory = workingDir;
 
             process.Start();
             var stdout = await process.StandardOutput.ReadToEndAsync();

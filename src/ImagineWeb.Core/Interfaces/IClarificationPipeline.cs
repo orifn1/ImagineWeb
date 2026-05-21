@@ -12,7 +12,8 @@ public interface IClarificationPipeline
         string? workingDirectory,
         CancellationToken ct,
         string? clarificationModelId = null,
-        string? providerOverride = null);
+        string? providerOverride = null,
+        PlatformType platformType = PlatformType.Website);
 
     ClarificationQualityWarning? AssessQuality(ClarificationResponse response);
 
@@ -28,7 +29,8 @@ public interface IClarificationPipeline
         string? model = null,
         string? providerOverride = null,
         string? reasoningEffort = null,
-        string? fixModel = null);
+        string? fixModel = null,
+        PlatformType platformType = PlatformType.Website);
 
     Task<CodeGenerationHandle> ImproveAsync(
         string solutionDirectory,
@@ -37,5 +39,6 @@ public interface IClarificationPipeline
         string? model = null,
         List<string>? attachmentPaths = null,
         string? providerOverride = null,
-        string? reasoningEffort = null);
+        string? reasoningEffort = null,
+        PlatformType platformType = PlatformType.Website);
 }

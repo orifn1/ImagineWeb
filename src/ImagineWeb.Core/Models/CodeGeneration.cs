@@ -18,6 +18,7 @@ public class CodeGenerationRequest
     public string? ReasoningEffort { get; init; }
     /// <summary>Optional model override specifically for post-generation validation fixes (CombinedFix). Falls back to Model if null.</summary>
     public string? FixModel { get; init; }
+    public PlatformType PlatformType { get; init; } = PlatformType.Website;
 }
 
 public class CodeGenerationHandle

@@ -60,12 +60,24 @@ public class ClarificationSessionStore
     {
         if (!Directory.Exists(_basePath)) return;
 
-        foreach (var dir in Directory.GetDirectories(_basePath, "clarify-*"))
+        var searchDirs = new List<string>();
+
+        // Scan platform subfolders (Azure/, Android/)
+        foreach (var subDir in new[] { "Azure", "Android" })
+        {
+            var platformDir = Path.Combine(_basePath, subDir);
+            if (Directory.Exists(platformDir))
+                searchDirs.AddRange(Directory.GetDirectories(platformDir, "clarify-*"));
+        }
+
+        // Also scan root for legacy sessions (pre-migration)
+        searchDirs.AddRange(Directory.GetDirectories(_basePath, "clarify-*"));
+
+        foreach (var dir in searchDirs)
         {
             var file = Path.Combine(dir, ".meta", "clarification.json");
             if (!File.Exists(file))
             {
-                // Fallback: check legacy location at root
                 file = Path.Combine(dir, "clarification.json");
                 if (!File.Exists(file)) continue;
             }

@@ -169,11 +169,38 @@
 
             <hr/>
 
+            <!-- Platform Type Selector -->
+            <div class="mb-3">
+                <label class="form-label fw-semibold"><i class="bi bi-phone me-1"></i>Platform</label>
+                <div class="btn-group w-100" role="group" id="platformSelector">
+                    <input type="radio" class="btn-check" name="platformType" id="platformWebsite" value="Website" checked autocomplete="off"/>
+                    <label class="btn btn-outline-primary" for="platformWebsite">
+                        <i class="bi bi-globe me-1"></i>Website (Azure)
+                    </label>
+                    <input type="radio" class="btn-check" name="platformType" id="platformAndroid" value="Android" autocomplete="off"/>
+                    <label class="btn btn-outline-primary" for="platformAndroid">
+                        <i class="bi bi-phone me-1"></i>Android App
+                    </label>
+                </div>
+                <div class="form-text" id="platformHint">Web application deployed to Azure via azd.</div>
+            </div>
+
             <!-- Provider + model selector available to all users (clarification phase) -->
             <div id="clarifyProviderSelector"></div>
 
+            <!-- Skip Clarification Option -->
+            <div class="mb-3">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch" id="skipClarificationCheck">
+                    <label class="form-check-label fw-semibold" for="skipClarificationCheck">
+                        <i class="bi bi-skip-forward me-1"></i>Skip clarifying questions
+                    </label>
+                </div>
+                <div class="form-text">When enabled, AI will use its own assumptions and start code generation immediately without asking questions.</div>
+            </div>
+
             <!-- Model Selection for Clarification (admin only) -->
-            <div class="mb-3 admin-only-model-section" style="display:none">
+            <div class="mb-3 admin-only-model-section" id="clarifyModelSection" style="display:none">
                 <label class="form-label fw-semibold"><i class="bi bi-cpu me-1"></i>AI Model for Clarification</label>
                 <div class="row g-2">
                     <div class="col-8">
@@ -606,6 +633,18 @@ const __isAdmin = window.__aitk_isAdmin || false;
 let clarifySessionId = null;
 let clarifyDeployPollInterval = null;
 let clarifyPremiumRequests = [];
+let selectedPlatformType = 'Website';
+
+// Platform selector
+document.querySelectorAll('input[name="platformType"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+        selectedPlatformType = e.target.value;
+        const hint = document.getElementById('platformHint');
+        hint.textContent = selectedPlatformType === 'Android'
+            ? 'Native Android app (Kotlin + Jetpack Compose). APK built locally.'
+            : 'Web application deployed to Azure via azd.';
+    });
+});
 
 function startDeployPolling() {
     stopDeployPolling();
@@ -910,15 +949,30 @@ async function startClarification() {
 
     const model = getSelectedModel();
     const clarificationModelId = getSelectedClarifyModelId();
+    const skipClarification = document.getElementById('skipClarificationCheck').checked;
     const btn = document.getElementById('btnStartClarify');
     btn.disabled = true;
-    showClarifyLoading(true, `Analyzing with ${clarificationModelId || 'default model'}...`);
+    showClarifyLoading(true, skipClarification
+        ? 'Starting code generation...'
+        : `Analyzing with ${clarificationModelId || 'default model'}...`);
 
     try {
+        const payload = { input, model, clarificationModelId, clarificationProvider: getClarifyProvider(), platformType: selectedPlatformType, skipClarification };
+        if (skipClarification) {
+            const codegenModel = getSelectedCodegenModelId();
+            if (codegenModel) payload.codegenModelId = codegenModel;
+            const codegenProvider = getCodegenProvider();
+            if (codegenProvider) payload.codegenProvider = codegenProvider;
+            const codegenReasoning = getCodegenReasoning();
+            if (codegenReasoning) payload.reasoningEffort = codegenReasoning;
+            const fixModelSel = document.getElementById('autofixModelSelect');
+            const fixModelId = fixModelSel?.value || undefined;
+            if (fixModelId) payload.fixModelId = fixModelId;
+        }
         const res = await fetch('/api/clarify/start', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ input, model, clarificationModelId, clarificationProvider: getClarifyProvider() })
+            body: JSON.stringify(payload)
         });
         const data = await res.json();
         if (!res.ok) { showToast(data.error || 'Clarification failed', 'danger'); return; }
@@ -948,7 +1002,7 @@ async function startClarification() {
         }
 
         // Server may auto-skip the clarification UI when the model is fully confident
-        // and needs no human input — it returns a generationId and we go straight to streaming.
+        // and needs no human input, or when the user opted to skip — it returns a generationId and we go straight to streaming.
         if (data.generationId) {
             hideAllClarify();
             document.getElementById('genPipeline').classList.remove('d-none');
@@ -956,8 +1010,11 @@ async function startClarification() {
             document.getElementById('genLogPanel').classList.remove('d-none');
             document.getElementById('genLogContent').textContent = '';
             document.getElementById('genPipelineStatus').classList.remove('d-none');
-            document.getElementById('genPipelineStatus').textContent = 'No clarification needed — code generation started.';
-            showToast('AI was confident — skipping clarification', 'info');
+            const skippedByUser = skipClarification;
+            document.getElementById('genPipelineStatus').textContent = skippedByUser
+                ? 'Clarification skipped — code generation started.'
+                : 'No clarification needed — code generation started.';
+            showToast(skippedByUser ? 'Skipping clarification — generating code' : 'AI was confident — skipping clarification', 'info');
             saveClarifyActiveSession();
             connectClarifyStream();
             return;
@@ -1383,7 +1440,9 @@ function completeClarifyPipeline() {
             return;
         }
         showClarifyDeploySection(session);
-        if (session.status === 'Deployed' || session.status === 'Deploying') {
+        if (session.platformType === 'Android') {
+            showToast('Android APK generated! Check the solution path for the build output.', 'success');
+        } else if (session.status === 'Deployed' || session.status === 'Deploying') {
             // Already deployed or deploying — don't re-trigger
         } else {
             showToast('Code generation complete! Starting deployment...', 'success');
@@ -1549,6 +1608,11 @@ async function resumeClarifySession(id) {
 
 function restoreClarifySession(session) {
     hideAllClarify();
+    if (session.platformType) {
+        selectedPlatformType = session.platformType;
+        const radio = document.querySelector(`input[name="platformType"][value="${session.platformType}"]`);
+        if (radio) radio.checked = true;
+    }
     if (session.status === 'AwaitingClarification' && session.clarificationResponse) {
         currentClarification = session.clarificationResponse;
         renderClarification(session.clarificationResponse, session.qualityWarning);
@@ -1590,6 +1654,15 @@ function restoreClarifySession(session) {
     if (__isAdmin) {
         document.querySelectorAll('.admin-only-model-section').forEach(function(el) { el.style.display = ''; });
     }
+
+    // Hide clarification model section when skip is enabled
+    var skipCheck = document.getElementById('skipClarificationCheck');
+    var clarifyModelSection = document.getElementById('clarifyModelSection');
+    function updateClarifyModelVisibility() {
+        if (!clarifyModelSection || !__isAdmin) return;
+        clarifyModelSection.style.display = skipCheck.checked ? 'none' : '';
+    }
+    if (skipCheck) skipCheck.addEventListener('change', updateClarifyModelVisibility);
 
     // Mount the unified provider+model selector (visible to all users).
     try {
@@ -1654,7 +1727,15 @@ function restoreClarifySession(session) {
             select.innerHTML = clarifyOpts;
 
             // Build code generation model selector
-            var codegenOpts = '<option value="">(use default from Settings)</option>';
+            var providerMap = { 'copilotSdk': 'copilot', 'ollama': 'ollama', 'openai': 'openai', 'anthropic': 'anthropic' };
+            var normalizedProvider = providerMap[data.currentProvider] || (data.currentProvider || '').toLowerCase();
+            var defaultModelEntry = models.find(function(m) { return m.provider === normalizedProvider && m.id === currentModel; })
+                || models.find(function(m) { return m.id === currentModel; });
+            var defaultModelName = defaultModelEntry ? (defaultModelEntry.name || defaultModelEntry.id) : currentModel;
+            var defaultOptionText = currentModel
+                ? 'Default from Settings (' + defaultModelName + ')'
+                : '(use default from Settings)';
+            var codegenOpts = '<option value="">' + defaultOptionText + '</option>';
             if (copilotModels.length > 0) {
                 codegenOpts += '<optgroup label="Copilot SDK">';
                 codegenOpts += copilotModels.map(m =>
@@ -1691,7 +1772,7 @@ function restoreClarifySession(session) {
 
             // Build auto-fix model selector (same as codegen)
             var autofixSelect = document.getElementById('autofixModelSelect');
-            if (autofixSelect) autofixSelect.innerHTML = '<option value="">(same as codegen)</option>' + codegenOpts.replace('<option value="">(use default from Settings)</option>', '');
+            if (autofixSelect) autofixSelect.innerHTML = '<option value="">(same as codegen)</option>' + codegenOpts.replace('<option value="">' + defaultOptionText + '</option>', '');
 
             // Wire adaptive reasoning for improve model
             if (improveSelect) {
@@ -1791,57 +1872,84 @@ function showClarifyDeploySection(session) {
     updateStepper('deploy');
     document.getElementById('resultSolutionPath').textContent = session.solutionPath || '';
 
-    const isDeployed = session.status === 'Deployed';
-    const isDeployFailed = session.status === 'DeployFailed';
-    const isTornDown = session.status === 'TornDown';
-    const showInitialDeployButton = session.status === 'GenerationComplete' || isTornDown;
-    document.getElementById('clarifyDeployButtons').classList.toggle('d-none', !showInitialDeployButton);
-    document.getElementById('clarifyDeployedInfo').classList.toggle('d-none', !isDeployed);
-    document.getElementById('clarifyTornDownInfo').classList.toggle('d-none', !isTornDown);
-    document.getElementById('clarifyDeployError').classList.toggle('d-none', !isDeployFailed || !session.lastDeployError);
+    const isAndroid = session.platformType === 'Android';
 
-    if (isDeployFailed && session.lastDeployError) {
-        if (__isAdmin) {
-            document.getElementById('clarifyDeployErrorText').textContent = session.lastDeployError;
-        } else {
-            document.getElementById('clarifyDeployErrorText').textContent = 'Deployment encountered an error. The system is attempting to fix it automatically.';
+    if (isAndroid) {
+        // For Android: show APK info, hide Azure deploy buttons
+        document.getElementById('clarifyDeployButtons').classList.add('d-none');
+        document.getElementById('clarifyDeployedInfo').classList.add('d-none');
+        document.getElementById('clarifyTornDownInfo').classList.add('d-none');
+        document.getElementById('clarifyDeployError').classList.add('d-none');
+        var androidInfo = document.getElementById('androidApkInfo');
+        if (!androidInfo) {
+            androidInfo = document.createElement('div');
+            androidInfo.id = 'androidApkInfo';
+            androidInfo.className = 'alert alert-success';
+            androidInfo.innerHTML = '<i class="bi bi-phone me-1"></i><strong>Android APK Generated</strong>' +
+                '<div class="mt-1 small">APK location: <code>' + (session.solutionPath || '') + '/app/app/build/outputs/apk/debug/app-debug.apk</code></div>' +
+                '<div class="mt-1 small text-muted">Install on device: <code>adb install app-debug.apk</code></div>';
+            document.getElementById('tab-deployment').prepend(androidInfo);
         }
-        var existingVal = document.getElementById('improveInstruction').value.trim();
-        if (!existingVal) {
-            document.getElementById('improveInstruction').value =
-                'Fix deployment error:\n' + session.lastDeployError;
-        }
-    }
-    // Only switch to Deployment tab if Fix & Improve is not currently active
-    var improveTab = document.getElementById('tab-improve-btn');
-    if (!improveTab.classList.contains('active')) {
-        bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-deployment-btn')).show();
-    }
-
-    const badgeMap = {
-        'GenerationComplete': ['Ready to Deploy', 'bg-warning'],
-        'Deploying': ['Deploying...', 'bg-info'],
-        'Improving': ['Auto-fixing...', 'bg-info'],
-        'Deployed': ['Deployed', 'bg-success'],
-        'TornDown': ['Torn Down', 'bg-secondary'],
-        'DeployFailed': ['Deploy Failed', 'bg-danger']
-    };
-    const [text, cls] = badgeMap[session.status] || ['Ready to Deploy', 'bg-warning'];
-    const badge = document.getElementById('clarifyDeployBadge');
-    badge.textContent = text;
-    badge.className = `badge ${cls}`;
-
-    if (isDeployed && session.deployedUrl) {
-        const link = document.getElementById('clarifyDeployedLink');
-        link.href = session.deployedUrl;
-        link.textContent = session.deployedUrl;
-    }
-
-    if (__isAdmin) {
-        document.getElementById('clarifyResourceGroup').textContent = session.azureResourceGroup || '';
-        document.getElementById('clarifyResourceGroupRow').style.display = '';
+        const badge = document.getElementById('clarifyDeployBadge');
+        badge.textContent = 'APK Ready';
+        badge.className = 'badge bg-success';
     } else {
-        document.getElementById('clarifyResourceGroupRow').style.display = 'none';
+        // Remove android info if switching context
+        var androidInfo = document.getElementById('androidApkInfo');
+        if (androidInfo) androidInfo.remove();
+
+        const isDeployed = session.status === 'Deployed';
+        const isDeployFailed = session.status === 'DeployFailed';
+        const isTornDown = session.status === 'TornDown';
+        const showInitialDeployButton = session.status === 'GenerationComplete' || isTornDown;
+        document.getElementById('clarifyDeployButtons').classList.toggle('d-none', !showInitialDeployButton);
+        document.getElementById('clarifyDeployedInfo').classList.toggle('d-none', !isDeployed);
+        document.getElementById('clarifyTornDownInfo').classList.toggle('d-none', !isTornDown);
+        document.getElementById('clarifyDeployError').classList.toggle('d-none', !isDeployFailed || !session.lastDeployError);
+
+        if (isDeployFailed && session.lastDeployError) {
+            if (__isAdmin) {
+                document.getElementById('clarifyDeployErrorText').textContent = session.lastDeployError;
+            } else {
+                document.getElementById('clarifyDeployErrorText').textContent = 'Deployment encountered an error. The system is attempting to fix it automatically.';
+            }
+            var existingVal = document.getElementById('improveInstruction').value.trim();
+            if (!existingVal) {
+                document.getElementById('improveInstruction').value =
+                    'Fix deployment error:\n' + session.lastDeployError;
+            }
+        }
+        // Only switch to Deployment tab if Fix & Improve is not currently active
+        var improveTab = document.getElementById('tab-improve-btn');
+        if (!improveTab.classList.contains('active')) {
+            bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-deployment-btn')).show();
+        }
+
+        const badgeMap = {
+            'GenerationComplete': ['Ready to Deploy', 'bg-warning'],
+            'Deploying': ['Deploying...', 'bg-info'],
+            'Improving': ['Auto-fixing...', 'bg-info'],
+            'Deployed': ['Deployed', 'bg-success'],
+            'TornDown': ['Torn Down', 'bg-secondary'],
+            'DeployFailed': ['Deploy Failed', 'bg-danger']
+        };
+        const [text, cls] = badgeMap[session.status] || ['Ready to Deploy', 'bg-warning'];
+        const badge = document.getElementById('clarifyDeployBadge');
+        badge.textContent = text;
+        badge.className = `badge ${cls}`;
+
+        if (isDeployed && session.deployedUrl) {
+            const link = document.getElementById('clarifyDeployedLink');
+            link.href = session.deployedUrl;
+            link.textContent = session.deployedUrl;
+        }
+
+        if (__isAdmin) {
+            document.getElementById('clarifyResourceGroup').textContent = session.azureResourceGroup || '';
+            document.getElementById('clarifyResourceGroupRow').style.display = '';
+        } else {
+            document.getElementById('clarifyResourceGroupRow').style.display = 'none';
+        }
     }
 
     // Render user prompt

@@ -5,11 +5,15 @@ namespace ImagineWeb.Core.Models;
 public class PipelineInput
 {
     public required PipelineSourceType SourceType { get; init; }
+    public PlatformType PlatformType { get; init; } = PlatformType.Website;
     public required SpecificationDraft Draft { get; init; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum PipelineSourceType { Hunter, Idea }
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum PlatformType { Website, Android }
 
 public class SpecificationDraft
 {
@@ -129,6 +133,7 @@ public class ClarificationSession
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public string? UserId { get; set; }
     public required PipelineSourceType SourceType { get; init; }
+    public PlatformType PlatformType { get; set; } = PlatformType.Website;
     public required SpecificationDraft Draft { get; init; }
     public ClarificationModel? SelectedModel { get; set; }
     public ClarificationResponse? ClarificationResponse { get; set; }

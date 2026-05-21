@@ -137,6 +137,58 @@ public static class PromptSections
         Otherwise, fix each failing item and briefly say what you changed.
         """;
 
+    public static string AndroidDeploymentContext(string workingDirectory) =>
+        $$"""
+        ANDROID APP CONTEXT:
+        This is a native Android application. The APK/AAB will be built locally.
+
+        CRITICAL: You MUST use the exact technology stack, engine, and framework specified in the user's prompt.
+        - If the user specifies Godot — build a Godot project (GDScript/C#, .tscn scenes, project.godot)
+        - If the user specifies Unity — build a Unity project
+        - If the user specifies Flutter — build a Flutter project
+        - If the user specifies React Native — build a React Native project
+        - If the user specifies a game engine or custom framework — use exactly that
+        - ONLY if the user does NOT specify any framework, default to Kotlin + Jetpack Compose + Material 3
+
+        Never override, replace, or ignore the user's framework choice. The user's prompt is the source of truth.
+
+        RULES:
+        1. ALL application code MUST be inside {{workingDirectory}}/app/
+        2. Use absolute file paths when creating or editing files
+        3. The project structure must match the chosen framework:
+           - Kotlin/Compose: Gradle project with settings.gradle.kts, build.gradle.kts, gradle wrapper, Target SDK 34, Min SDK 26
+           - Godot: project.godot at root, scenes/, scripts/, shaders/ folders, export_presets.cfg for Android
+           - Flutter: pubspec.yaml, lib/, android/ folders
+           - React Native: package.json, android/ folder with Gradle
+           - Other engines: follow the engine's standard project structure
+        4. Application ID / package name must follow reverse domain format: com.imagineweb.<appname>
+
+        MANDATORY SELF-VALIDATION:
+        After creating or modifying ALL files, you MUST build the project before finishing.
+        Use the build command appropriate for the chosen framework:
+        - Kotlin/Compose: `cd {{workingDirectory}}/app && ./gradlew assembleDebug --no-daemon -q`
+        - Godot: verify project.godot exists and all referenced scenes/scripts are present
+        - Flutter: `cd {{workingDirectory}}/app && flutter build apk --debug`
+        - React Native: `cd {{workingDirectory}}/app && npx react-native build-android --mode=debug`
+        If the build fails, fix the errors and re-run until it passes. Do NOT finish with broken code.
+        """;
+
+    public static string AndroidProductionRules() =>
+        """
+        ANDROID PRODUCTION QUALITY RULES:
+        - Professional visual design with proper theming (light + dark mode support where applicable)
+        - Responsive layouts that work on different screen sizes (phones and tablets)
+        - Proper Android lifecycle handling (no resource leaks)
+        - Proper error handling and loading states in UI
+        - No hardcoded API keys in source code
+        - Proper app icon
+        - Accessibility support where applicable
+        - No placeholder or TODO code — all features must be fully implemented
+        - If using Kotlin/Compose: Material 3, strings.xml for localization, ProGuard/R8 rules, SplashScreen API, edge-to-edge display
+        - If using a game engine (Godot/Unity): real scenes, shaders, materials, and assets — not just scaffolding
+        - All visual effects, animations, and interactions described in the prompt must be fully implemented
+        """;
+
     private static string Load(string name)
     {
         lock (CacheLock)

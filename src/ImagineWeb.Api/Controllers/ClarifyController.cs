@@ -75,20 +75,65 @@ public class ClarifyController : ControllerBase
         var session = new ClarificationSession
         {
             SourceType = request.Input.SourceType,
+            PlatformType = request.PlatformType,
             Draft = draft,
             SelectedModel = request.Model
         };
         session.StepTimings["clarification"] = new StepTiming();
 
+        var platformFolder = request.PlatformType == PlatformType.Android ? "Android" : "Azure";
         var solutionDir = Path.Combine(
-            AppContext.BaseDirectory, _config.SolutionsBasePath, $"clarify-{session.Id}");
+            AppContext.BaseDirectory, _config.SolutionsBasePath, platformFolder, $"clarify-{session.Id}");
         session.SolutionPath = solutionDir;
 
-        var result = await _pipeline.ClarifyAsync(draft, request.Model, solutionDir, ct, request.ClarificationModelId, request.ClarificationProvider);
+        ClarificationQualityWarning? warning = null;
+        string? usedModel = null;
+
+        if (request.SkipClarification)
+        {
+            // Skip the AI clarification call entirely — use an empty response with the draft info.
+            session.ClarificationResponse = new ClarificationResponse
+            {
+                Summary = draft.Description,
+                Confidence = "high"
+            };
+            session.Status = ClarificationSessionStatus.AwaitingClarification;
+            session.UserId = SingleUserId;
+            session.IsAdminGenerated = true;
+            _store.Set(session);
+
+            try
+            {
+                var answers = new ClarificationAnswers
+                {
+                    CodegenModelId = request.CodegenModelId,
+                    CodegenProvider = request.CodegenProvider,
+                    ReasoningEffort = request.ReasoningEffort,
+                    FixModelId = request.FixModelId
+                };
+                var handle = await StartGenerationAsync(session, answers, ct);
+                return Ok(new StartClarificationResponse
+                {
+                    SessionId = session.Id,
+                    Clarification = session.ClarificationResponse,
+                    PlatformType = session.PlatformType,
+                    GenerationId = handle.GenerationId,
+                    Status = session.Status
+                });
+            }
+            catch (Exception ex)
+            {
+                session.Status = ClarificationSessionStatus.Failed;
+                _store.Set(session);
+                _logger.LogWarning(ex, "Skip-clarification code generation failed for session {Id}", session.Id);
+                return StatusCode(500, new { error = "Code generation failed: " + ex.Message });
+            }
+        }
+
+        var result = await _pipeline.ClarifyAsync(draft, request.Model, solutionDir, ct, request.ClarificationModelId, request.ClarificationProvider, request.PlatformType);
         session.ClarificationResponse = result.Response;
         session.SdkSessionId = result.SdkSessionId;
 
-        ClarificationQualityWarning? warning = null;
         if (request.Model == ClarificationModel.Local)
             warning = _pipeline.AssessQuality(result.Response);
         session.QualityWarning = warning;
@@ -97,7 +142,7 @@ public class ClarifyController : ControllerBase
         session.UserId = SingleUserId;
         session.IsAdminGenerated = true;
 
-        var usedModel = request.ClarificationModelId ?? _analysisConfig.Model;
+        usedModel = request.ClarificationModelId ?? _analysisConfig.Model;
         session.CopilotRequests.Add(new StoredCopilotRequest
         {
             RequestType = "Clarification",
@@ -109,7 +154,6 @@ public class ClarifyController : ControllerBase
 
         // Shortcut: skip the clarification UI step entirely when the model is fully confident
         // and needs no human input (no questions + no user_input env vars).
-        // This saves a UI round-trip; the LLM call count is unchanged (1 clarify + 1 codegen).
         var hasUserInputEnvVars = result.Response.RequiredEnvVars
             .Any(v => string.Equals(v.Source, "user_input", StringComparison.OrdinalIgnoreCase));
 
@@ -127,14 +171,13 @@ public class ClarifyController : ControllerBase
                     Clarification = result.Response,
                     QualityWarning = warning,
                     ClarificationModel = usedModel,
+                    PlatformType = session.PlatformType,
                     GenerationId = handle.GenerationId,
                     Status = session.Status
                 });
             }
             catch (Exception ex)
             {
-                // Fall through to the regular clarification flow if auto-start fails.
-                // The user will still see the (empty) clarification card and can retry from the UI.
                 session.Status = ClarificationSessionStatus.AwaitingClarification;
                 _store.Set(session);
                 _logger.LogWarning(ex, "Auto-start of code generation failed for session {Id}", session.Id);
@@ -146,7 +189,8 @@ public class ClarifyController : ControllerBase
             SessionId = session.Id,
             Clarification = result.Response,
             QualityWarning = warning,
-            ClarificationModel = usedModel
+            ClarificationModel = usedModel,
+            PlatformType = session.PlatformType
         });
     }
 
@@ -157,7 +201,7 @@ public class ClarifyController : ControllerBase
         var session = _store.Get(sessionId);
         if (session is null) return NotFound();
 
-        var result = await _pipeline.ClarifyAsync(session.Draft, request.Model, session.SolutionPath, ct, request.ClarificationModelId, request.ClarificationProvider);
+        var result = await _pipeline.ClarifyAsync(session.Draft, request.Model, session.SolutionPath, ct, request.ClarificationModelId, request.ClarificationProvider, session.PlatformType);
         session.ClarificationResponse = result.Response;
         session.SelectedModel = request.Model;
         session.SdkSessionId = result.SdkSessionId;
@@ -184,7 +228,8 @@ public class ClarifyController : ControllerBase
             SessionId = session.Id,
             Clarification = result.Response,
             QualityWarning = warning,
-            ClarificationModel = usedModel
+            ClarificationModel = usedModel,
+            PlatformType = session.PlatformType
         });
     }
 
@@ -236,7 +281,7 @@ public class ClarifyController : ControllerBase
         _store.Set(session);
 
         var handle = await _pipeline.GenerateCodeAsync(
-            finalSpec, session.SolutionPath!, ct, answers.CodegenModelId, answers.CodegenProvider, answers.ReasoningEffort, answers.FixModelId);
+            finalSpec, session.SolutionPath!, ct, answers.CodegenModelId, answers.CodegenProvider, answers.ReasoningEffort, answers.FixModelId, session.PlatformType);
         session.GenerationId = handle.GenerationId;
         session.SdkSessionId = handle.SdkSessionId;
         _store.Set(session);
@@ -340,7 +385,7 @@ public class ClarifyController : ControllerBase
         try
         {
             var handle = await _pipeline.GenerateCodeAsync(
-                session.FinalSpec, session.SolutionPath!, ct, request.Model, request.Provider);
+                session.FinalSpec, session.SolutionPath!, ct, request.Model, request.Provider, platformType: session.PlatformType);
             session.GenerationId = handle.GenerationId;
             session.SdkSessionId = handle.SdkSessionId;
             _store.Set(session);
@@ -742,7 +787,7 @@ public class ClarifyController : ControllerBase
             var handle = await _pipeline.ImproveAsync(
                 session.SolutionPath!, request.Instruction, ct,
                 request.Model, attachmentPaths: request.AttachmentPaths, providerOverride: request.Provider,
-                reasoningEffort: request.ReasoningEffort);
+                reasoningEffort: request.ReasoningEffort, platformType: session.PlatformType);
             session.GenerationId = handle.GenerationId;
             session.SdkSessionId = handle.SdkSessionId;
             _store.Set(session);
@@ -810,9 +855,10 @@ public class ClarifyController : ControllerBase
 
         if (succeeded)
         {
-            var siteDir = Path.Combine(session.SolutionPath!, "site");
-            var hasFiles = Directory.Exists(siteDir)
-                && Directory.EnumerateFiles(siteDir, "*", SearchOption.AllDirectories).Any();
+            var codeSubDir = session.PlatformType == PlatformType.Android ? "app" : "site";
+            var codeDir = Path.Combine(session.SolutionPath!, codeSubDir);
+            var hasFiles = Directory.Exists(codeDir)
+                && Directory.EnumerateFiles(codeDir, "*", SearchOption.AllDirectories).Any();
 
             session.Status = hasFiles
                 ? ClarificationSessionStatus.GenerationComplete
@@ -947,10 +993,16 @@ public class ClarifyController : ControllerBase
         try
         {
             var handle = await _pipeline.GenerateCodeAsync(
-                session.FinalSpec, session.SolutionPath!, ct);
+                session.FinalSpec, session.SolutionPath!, ct,
+                session.Answers?.CodegenModelId,
+                session.Answers?.CodegenProvider,
+                session.Answers?.ReasoningEffort,
+                session.Answers?.FixModelId,
+                session.PlatformType);
             session.GenerationId = handle.GenerationId;
             session.SdkSessionId = handle.SdkSessionId;
             _store.Set(session);
+            RegisterFinalizeCallback(session.Id, handle.GenerationId);
             return true;
         }
         catch
@@ -964,7 +1016,8 @@ public class ClarifyController : ControllerBase
     private async Task RestoreSolutionIfArchivedAsync(string solutionPath, CancellationToken ct)
     {
         var siteDir = Path.Combine(solutionPath, "site");
-        if (Directory.Exists(siteDir)) return;
+        var appDir = Path.Combine(solutionPath, "app");
+        if (Directory.Exists(siteDir) || Directory.Exists(appDir)) return;
 
         try
         {
@@ -1007,6 +1060,17 @@ public record StartClarificationRequest
     public string? ClarificationModelId { get; init; }
     /// <summary>Per-request analysis/clarification provider override (ollama, copilotsdk, openai, anthropic).</summary>
     public string? ClarificationProvider { get; init; }
+    public PlatformType PlatformType { get; init; } = PlatformType.Website;
+    /// <summary>When true, skip the clarification Q&amp;A step and proceed directly to code generation using AI assumptions.</summary>
+    public bool SkipClarification { get; init; }
+    /// <summary>Code generation model override. Used when SkipClarification is true to bypass the submit step.</summary>
+    public string? CodegenModelId { get; init; }
+    /// <summary>Code generation provider override (ollama, copilotsdk, openai, anthropic).</summary>
+    public string? CodegenProvider { get; init; }
+    /// <summary>Reasoning effort for code generation (low, medium, high).</summary>
+    public string? ReasoningEffort { get; init; }
+    /// <summary>Model for post-generation auto-fix.</summary>
+    public string? FixModelId { get; init; }
 }
 
 public record RerunRequest
@@ -1022,6 +1086,7 @@ public record StartClarificationResponse
     public required ClarificationResponse Clarification { get; init; }
     public ClarificationQualityWarning? QualityWarning { get; init; }
     public string? ClarificationModel { get; init; }
+    public PlatformType PlatformType { get; init; } = PlatformType.Website;
 
     /// <summary>
     /// Set when the model returned high confidence with no clarifying questions

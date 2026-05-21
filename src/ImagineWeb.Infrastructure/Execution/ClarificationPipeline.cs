@@ -51,9 +51,10 @@ public class ClarificationPipeline : IClarificationPipeline
         string? workingDirectory,
         CancellationToken ct,
         string? clarificationModelId = null,
-        string? providerOverride = null)
+        string? providerOverride = null,
+        PlatformType platformType = PlatformType.Website)
     {
-        var prompt = BuildClarificationPrompt(draft);
+        var prompt = BuildClarificationPrompt(draft, platformType);
         var jsonSystemPrompt = "You MUST respond with ONLY a single JSON object. No markdown, no prose, no code fences.";
 
         string rawResponse;
@@ -151,12 +152,17 @@ public class ClarificationPipeline : IClarificationPipeline
         string? model = null,
         string? providerOverride = null,
         string? reasoningEffort = null,
-        string? fixModel = null)
+        string? fixModel = null,
+        PlatformType platformType = PlatformType.Website)
     {
         Directory.CreateDirectory(solutionDirectory);
-        Directory.CreateDirectory(Path.Combine(solutionDirectory, "site"));
 
-        var promptContent = BuildCodeGenerationPrompt(spec);
+        var codeSubDir = platformType == PlatformType.Android ? "app" : "site";
+        Directory.CreateDirectory(Path.Combine(solutionDirectory, codeSubDir));
+
+        var promptContent = platformType == PlatformType.Android
+            ? BuildAndroidCodeGenerationPrompt(spec)
+            : BuildCodeGenerationPrompt(spec);
         var promptPath = Path.Combine(solutionDirectory, "prompt.md");
         await File.WriteAllTextAsync(promptPath, promptContent, ct);
         _logger.LogInformation("Code generation prompt written ({Len} chars) to {Path}", promptContent.Length, promptPath);
@@ -197,15 +203,20 @@ public class ClarificationPipeline : IClarificationPipeline
             solutionDirectory,
             promptContent.Length > 300 ? promptContent[..300] + "..." : promptContent);
 
+        var systemAppend = platformType == PlatformType.Android
+            ? PromptSections.AndroidDeploymentContext(solutionDirectory)
+            : PromptSections.CopilotSdkDeploymentContext(solutionDirectory);
+
         var handle = await generator.StartAsync(new CodeGenerationRequest
         {
             PromptFilePath = promptPath,
             WorkingDirectory = solutionDirectory,
-            SystemMessageAppend = PromptSections.CopilotSdkDeploymentContext(solutionDirectory),
+            SystemMessageAppend = systemAppend,
             Model = resolvedModel,
             Streaming = true,
             ReasoningEffort = reasoningEffort,
-            FixModel = fixModel
+            FixModel = fixModel,
+            PlatformType = platformType
         }, ct);
 
         _logger.LogInformation(
@@ -222,21 +233,51 @@ public class ClarificationPipeline : IClarificationPipeline
         string? model = null,
         List<string>? attachmentPaths = null,
         string? providerOverride = null,
-        string? reasoningEffort = null)
+        string? reasoningEffort = null,
+        PlatformType platformType = PlatformType.Website)
     {
-        var siteDir = Path.Combine(solutionDirectory, "site");
+        var codeSubDir = platformType == PlatformType.Android ? "app" : "site";
+        var codeDir = Path.Combine(solutionDirectory, codeSubDir);
         var excludedDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            { "node_modules", "bin", "obj", ".git", ".vs", ".vscode", "__pycache__" };
-        var fileList = Directory.Exists(siteDir)
-            ? string.Join("\n", Directory.EnumerateFiles(siteDir, "*", SearchOption.AllDirectories)
+            { "node_modules", "bin", "obj", ".git", ".vs", ".vscode", "__pycache__", "build", ".gradle" };
+        var fileList = Directory.Exists(codeDir)
+            ? string.Join("\n", Directory.EnumerateFiles(codeDir, "*", SearchOption.AllDirectories)
                 .Where(f => !excludedDirs.Any(d => f.Contains(Path.DirectorySeparatorChar + d + Path.DirectorySeparatorChar)
                     || f.Contains(Path.AltDirectorySeparatorChar + d + Path.AltDirectorySeparatorChar)))
                 .Select(f => "  " + Path.GetRelativePath(solutionDirectory, f)))
             : "(no files yet)";
 
-        var iacContext = BuildIaCContext(solutionDirectory);
+        string promptContent;
+        if (platformType == PlatformType.Android)
+        {
+            promptContent = $"""
+            # Improvement Request
 
-        var promptContent = $"""
+            The working directory `{solutionDirectory}` contains an existing Android application with these files:
+            {fileList}
+
+            ## User Instruction
+            {instruction}
+
+            ## Rules
+            - Modify existing files in place. Do NOT delete or recreate files unless explicitly asked.
+            - Keep all existing functionality working unless the user asks to remove something.
+            - Follow the same coding style and patterns already in the project.
+            - Use absolute paths for every file you create or edit.
+            {PromptSections.StrictCodeRules()}
+
+            MANDATORY SELF-VALIDATION:
+            After modifying files, build the project using the build system present in the project:
+            - If Gradle project: `cd {solutionDirectory}/app && ./gradlew assembleDebug --no-daemon -q`
+            - If Godot project: verify all referenced scenes, scripts, and resources exist
+            - If Flutter project: `cd {solutionDirectory}/app && flutter build apk --debug`
+            If the build fails, fix errors and retry until it passes.
+            """;
+        }
+        else
+        {
+            var iacContext = BuildIaCContext(solutionDirectory);
+            promptContent = $"""
             # Improvement Request
 
             The working directory `{solutionDirectory}` contains an existing web application with these files:
@@ -258,6 +299,7 @@ public class ClarificationPipeline : IClarificationPipeline
 
             {PromptSections.IaCFixRules()}
             """;
+        }
 
         var promptPath = Path.Combine(solutionDirectory, "improve-prompt.md");
         await File.WriteAllTextAsync(promptPath, promptContent, ct);
@@ -284,27 +326,117 @@ public class ClarificationPipeline : IClarificationPipeline
                 : _copilotSdk;
         }
 
+        var improveSystemAppend = platformType == PlatformType.Android
+            ? PromptSections.AndroidDeploymentContext(solutionDirectory)
+            : PromptSections.CopilotSdkDeploymentContext(solutionDirectory);
+
         var handle = await generator.StartAsync(new CodeGenerationRequest
         {
             PromptFilePath = promptPath,
             WorkingDirectory = solutionDirectory,
-            SystemMessageAppend = PromptSections.CopilotSdkDeploymentContext(solutionDirectory),
+            SystemMessageAppend = improveSystemAppend,
             Model = resolvedModel,
             CustomSendPrompt = sendPrompt,
             Streaming = true,
             AttachmentPaths = attachmentPaths,
             IsImprovement = true,
-            ReasoningEffort = reasoningEffort
+            ReasoningEffort = reasoningEffort,
+            PlatformType = platformType
         }, ct);
 
         _logger.LogInformation("Improvement started: {GenerationId} at {Path}", handle.GenerationId, solutionDirectory);
         return handle;
     }
 
-    private static string BuildClarificationPrompt(SpecificationDraft draft)
+    private static string BuildClarificationPrompt(SpecificationDraft draft, PlatformType platformType = PlatformType.Website)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("""
+
+        if (platformType == PlatformType.Android)
+        {
+            sb.AppendLine("""
+            You are a senior product analyst with expertise in UX, business strategy, and Android mobile development.
+            You will receive a specification draft for an Android application.
+
+            CRITICAL: If the user's description specifies a particular technology, engine, or framework
+            (e.g. Godot, Unity, Flutter, React Native, specific game engine), you MUST respect that choice.
+            Include it in your summary and assumptions. Do NOT override it with Kotlin/Jetpack Compose.
+            Only default to Kotlin + Jetpack Compose if the user does NOT specify any framework.
+
+            FIRST: Use web search to briefly research the topic before formulating questions.
+            Understanding the domain helps you ask the right questions and make realistic assumptions.
+
+            Your task is to respond with a SINGLE JSON object (no markdown, no prose, no extra text) that:
+            1. Summarizes your understanding of what needs to be built
+            2. Rates your confidence (high/medium/low)
+            3. Asks clarifying questions needed for code generation
+            4. Lists assumptions you'll make if not answered
+            5. Identifies required environment variables
+
+            IMPORTANT: ONLY ask questions about things that require HUMAN knowledge:
+            - Business logic and domain rules that can't be inferred from the description
+            - User intentions and preferences (e.g. "Should users need accounts?", "What pricing model?")
+            - External service dependencies the user must provide (API keys, data sources)
+            - Target audience details that affect UX decisions
+
+            DO NOT ask about:
+            - Technical architecture choices that the user already specified in the prompt
+            - Android SDK version or build tool choices (YOU decide using modern defaults)
+            - Code structure, patterns, or libraries (YOU choose best practices)
+            - UI framework decisions (use whatever the user specified, or Jetpack Compose if unspecified)
+            - Performance/optimization settings (use sensible defaults)
+
+            If you can make a reasonable technical assumption — make it and list it in "assumptions".
+            Fewer, higher-quality questions are better than many technical ones.
+
+            A GOOD clarifying question asks about business intent or domain knowledge:
+            - "Do users need accounts to save their progress?"
+            - "What external API provides the data?"
+            - "Should the app work offline?"
+            A BAD question asks about technical implementation:
+            - "Should we use Room or SQLite directly?" (YOU decide)
+            - "Which navigation library?" (YOU decide)
+            - "Min SDK version?" (YOU decide — use modern defaults)
+
+            REQUIRED JSON SCHEMA:
+            {
+              "summary": "string — your understanding of what needs to be built",
+              "confidence": "high | medium | low",
+              "clarifying_questions": [
+                {
+                  "id": "string — unique id like q1, q2",
+                  "question": "string",
+                  "reason": "string — why this is needed for code generation",
+                  "input_type": "text | select | multiselect | boolean",
+                  "options": ["string"]
+                }
+              ],
+              "assumptions": [
+                "string — things you will assume if not answered"
+              ],
+              "required_env_vars": [
+                {
+                  "key": "string — exact env var name e.g. OPENAI_API_KEY",
+                  "description": "string",
+                  "source": "user_input",
+                  "required_before_deploy": false,
+                  "example_value": "string — safe non-real example"
+                }
+              ]
+            }
+
+            Rules:
+            - Output ONLY valid JSON. No markdown fences, no explanation text.
+            - Ask 2-7 clarifying questions maximum — only what truly needs human input.
+            - Each question with options must have 2-5 options.
+            - input_type "select" = single choice, "multiselect" = multiple choices, "boolean" = yes/no, "text" = free text.
+            - For env vars: use source "user_input" for API keys or external service credentials the user must provide.
+            - Android apps do NOT use azd_output or azure_keyvault sources.
+            """);
+        }
+        else
+        {
+            sb.AppendLine("""
             You are a senior product analyst with expertise in UX, business strategy, and web development.
             You will receive a specification draft for a web application that needs to be built and deployed to Azure.
 
@@ -381,6 +513,7 @@ public class ClarificationPipeline : IClarificationPipeline
             - Use source "user_input" ONLY for values the user must provide (API keys for external services, etc.).
             - Always include AZURE_RESOURCE_GROUP and AZURE_LOCATION as azd_output vars.
             """);
+        }
 
         sb.AppendLine();
         sb.AppendLine("## Specification Draft");
@@ -536,6 +669,69 @@ public class ClarificationPipeline : IClarificationPipeline
 
         // Deployment / IaC / SelfValidation rules are appended via Copilot SDK SystemMessage
         // (CopilotSdkDeploymentContext) on every turn — duplicating them here is wasted tokens.
+
+        return sb.ToString();
+    }
+
+    private static string BuildAndroidCodeGenerationPrompt(FinalSpecification spec)
+    {
+        var sb = new StringBuilder();
+
+        sb.AppendLine($"# {spec.Draft.Title}");
+        sb.AppendLine();
+        sb.AppendLine(spec.Draft.Description);
+        sb.AppendLine();
+
+        sb.AppendLine(PromptSections.StrictCodeRules());
+        sb.AppendLine();
+        sb.AppendLine(PromptSections.AndroidProductionRules());
+        sb.AppendLine();
+
+        if (spec.CollectedEnvVars.Count > 0)
+        {
+            sb.AppendLine("ENVIRONMENT VARIABLES (already collected from user — use directly in BuildConfig or local.properties):");
+            foreach (var (key, value) in spec.CollectedEnvVars)
+                sb.AppendLine($"  {key}={value}");
+            sb.AppendLine();
+        }
+
+        if (!string.IsNullOrWhiteSpace(spec.Draft.TargetAudience))
+            sb.AppendLine($"## Target Audience\n{spec.Draft.TargetAudience}\n");
+
+        if (!string.IsNullOrWhiteSpace(spec.Draft.ActionPlan))
+            sb.AppendLine($"## Action Plan\n{spec.Draft.ActionPlan}\n");
+
+        if (!string.IsNullOrWhiteSpace(spec.Draft.MonetizationHint))
+            sb.AppendLine($"## Monetization\n{spec.Draft.MonetizationHint}\n");
+
+        if (spec.Clarification.Assumptions.Count > 0)
+        {
+            sb.AppendLine("## Assumptions");
+            foreach (var a in spec.Clarification.Assumptions)
+                sb.AppendLine($"- {a}");
+            sb.AppendLine();
+        }
+
+        if (spec.UserAnswers.Answers.Count > 0)
+        {
+            sb.AppendLine("## Clarification Answers");
+            foreach (var (questionId, answer) in spec.UserAnswers.Answers)
+            {
+                var question = spec.Clarification.ClarifyingQuestions
+                    .FirstOrDefault(q => q.Id == questionId);
+                sb.AppendLine($"**Q:** {question?.Question ?? questionId}");
+                sb.AppendLine($"**A:** {answer}");
+                sb.AppendLine();
+            }
+        }
+
+        if (spec.Draft.KeyFacts.Count > 0)
+        {
+            sb.AppendLine("## Key Facts");
+            foreach (var fact in spec.Draft.KeyFacts)
+                sb.AppendLine($"- {fact}");
+            sb.AppendLine();
+        }
 
         return sb.ToString();
     }
