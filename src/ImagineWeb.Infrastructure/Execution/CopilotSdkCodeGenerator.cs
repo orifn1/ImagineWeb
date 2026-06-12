@@ -684,15 +684,18 @@ public sealed class CopilotSdkCodeGenerator : ICodeGenerator, IAsyncDisposable
         {
             var client = await GetOrCreateClientAsync(ct);
             var models = await client.ListModelsAsync(ct);
-            return models
+            var result = models
                 .Select(m => new AvailableModel
                 {
                     Id = m.Id,
                     Name = m.Name,
                     SupportsReasoning = m.Capabilities?.Supports?.ReasoningEffort == true
                 })
-                .OrderBy(m => m.Name)
                 .ToList();
+
+            var existingIds = new HashSet<string>(result.Select(m => m.Id), StringComparer.OrdinalIgnoreCase);
+
+            return result.OrderBy(m => m.Name).ToList();
         }
         catch (Exception ex)
         {

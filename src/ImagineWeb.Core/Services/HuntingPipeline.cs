@@ -644,7 +644,7 @@ public class HuntingPipeline : BackgroundService
                 // Phase 2: Feasibility Assessment — gate on the BEST of the two axes so that
                 // high-interestingness non-commercial concepts also get a full build plan.
                 var bestScore = Math.Max(result.ProfitScore, result.InterestingnessScore);
-                if (bestScore > _config.Phase2Threshold && result.OpportunityType != Models.OpportunityType.None)
+                if (bestScore >= _config.Phase2Threshold && result.OpportunityType != Models.OpportunityType.None)
                 {
                     _logger.LogInformation("Phase 2 deep analysis for {Url} (best {Best}/10, profit {Profit}/10, interest {Interest}/10, type {Type})",
                         job.Url, bestScore, result.ProfitScore, result.InterestingnessScore, result.OpportunityType);

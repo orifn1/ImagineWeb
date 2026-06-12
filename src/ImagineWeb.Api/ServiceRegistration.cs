@@ -104,7 +104,10 @@ public static class ServiceRegistration
         {
             var config = sp.GetRequiredService<IConfiguration>();
             var ac = config.GetSection(AnalysisConfig.SectionName).Get<AnalysisConfig>() ?? new AnalysisConfig();
-            var p1Key = !string.IsNullOrEmpty(ac.Phase1Provider) ? ac.Phase1Provider : ac.Provider;
+            var (p1ModelProvider, _) = ParseModelValue(ac.Phase1Model);
+            var p1Key = !string.IsNullOrEmpty(p1ModelProvider) ? p1ModelProvider
+                      : !string.IsNullOrEmpty(ac.Phase1Provider) ? ac.Phase1Provider
+                      : ac.Provider;
             return ResolveClient(sp, p1Key);
         });
 
@@ -112,15 +115,24 @@ public static class ServiceRegistration
         {
             var config = sp.GetRequiredService<IConfiguration>();
             var ac = config.GetSection(AnalysisConfig.SectionName).Get<AnalysisConfig>() ?? new AnalysisConfig();
-            var p1Key = !string.IsNullOrEmpty(ac.Phase1Provider) ? ac.Phase1Provider : ac.Provider;
-            var p2Key = !string.IsNullOrEmpty(ac.Phase2Provider) ? ac.Phase2Provider : ac.Provider;
+
+            var (p1ModelProvider, p1ModelName) = ParseModelValue(ac.Phase1Model);
+            var (p2ModelProvider, p2ModelName) = ParseModelValue(ac.Phase2Model);
+
+            var p1Key = !string.IsNullOrEmpty(p1ModelProvider) ? p1ModelProvider
+                      : !string.IsNullOrEmpty(ac.Phase1Provider) ? ac.Phase1Provider
+                      : ac.Provider;
+            var p2Key = !string.IsNullOrEmpty(p2ModelProvider) ? p2ModelProvider
+                      : !string.IsNullOrEmpty(ac.Phase2Provider) ? ac.Phase2Provider
+                      : ac.Provider;
             var fallbackKey = ac.FallbackProvider;
 
             var p1 = ResolveClient(sp, p1Key);
             var p2 = p1Key.Equals(p2Key, StringComparison.OrdinalIgnoreCase) ? p1 : ResolveClient(sp, p2Key);
             ILlmClient? fallback = !string.IsNullOrEmpty(fallbackKey) ? ResolveClient(sp, fallbackKey) : null;
 
-            return new PageAnalyzer(p1, p2, sp.GetRequiredService<ILogger<PageAnalyzer>>(), fallback);
+            return new PageAnalyzer(p1, p2, sp.GetRequiredService<ILogger<PageAnalyzer>>(), fallback,
+                phase1Model: p1ModelName, phase2Model: p2ModelName);
         });
 
         services.AddScoped<IOllamaAnalyzer>(sp => new OllamaAnalyzerShim(sp.GetRequiredService<IPageAnalyzer>()));
@@ -197,6 +209,22 @@ public static class ServiceRegistration
         services.AddControllers()
             .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(
                 new System.Text.Json.Serialization.JsonStringEnumConverter()));
+    }
+
+    private static (string provider, string model) ParseModelValue(string modelValue)
+    {
+        if (string.IsNullOrWhiteSpace(modelValue))
+            return ("", "");
+
+        var colonIdx = modelValue.IndexOf(':');
+        if (colonIdx > 0)
+        {
+            var provider = modelValue[..colonIdx];
+            var model = modelValue[(colonIdx + 1)..];
+            return (provider, model);
+        }
+
+        return ("copilotsdk", modelValue);
     }
 
     private static ILlmClient ResolveClient(IServiceProvider sp, string provider) => provider.ToLowerInvariant() switch

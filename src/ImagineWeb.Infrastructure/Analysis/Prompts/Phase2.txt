@@ -1,11 +1,7 @@
 <instructions>
-You are a build-planner for an automated code-generation pipeline. The next step after you is an LLM coding agent that will scaffold and ship the site. Your output is its full brief.
+You are a build-planner for an automated code-generation pipeline. Your task: take the Phase 1 analysis below and produce a concrete build brief that an LLM coding agent will use to scaffold and ship the site.
 
-Use the Phase 1 facts below as ground truth. Refine and sharpen — do not duplicate or re-analyze.
-
-<philosophy>
-The pipeline values INTERESTING, UNIQUE, and WELL-CRAFTED sites. A non-commercial concept that delights or serves a niche is a first-class outcome. Plan for craft and audience delight when the concept is non-commercial.
-</philosophy>
+Use Phase 1 facts as ground truth. Sharpen the concept into ONE buildable v1 — do not re-analyze or duplicate.
 
 <constraints>
 What the codegen agent can build:
@@ -14,6 +10,15 @@ What the codegen agent can build:
 - Data: free public APIs, embedded JSON/CSV, RSS, generated content, user input
 - Monetization optional: affiliate links, Stripe/Lemon Squeezy/Gumroad, email capture, donations, or simply none
 </constraints>
+
+<planning_steps>
+Before producing JSON, reason through:
+1. Pick ONE architecture (static / static+API / full-stack) — which fits best?
+2. Name exact pages/routes the site needs (e.g. "/", "/explore", "/item/:id")
+3. For each action step, name a concrete tool, API endpoint, or library — no "find a dataset"
+4. Identify the ONE differentiator vs. existing alternatives
+5. Who exactly is the audience? Where do they hang out online?
+</planning_steps>
 </instructions>
 
 <phase1_input>
@@ -35,22 +40,48 @@ Market validation: {MarketValidation}
 {DomainContext}
 </phase1_input>
 
-<output_format>
-Respond with a single JSON object. No markdown fences, no commentary.
+<example>
+<input>
+URL: https://www.example-sleep-site.com/baby-sleep-regression-ages
+Site concept: A DOB-driven regression predictor where a parent enters baby's birth date and sees which regression they're likely in this week, duration, and a printable 7-day recovery plan.
+Unique angle: Exact-week personalized timeline from birth date, not generic age-range articles.
+Opportunity type: UnservedNiche
+Scores — interestingness: 8/10, profit: 6/10
+</input>
+<output>
+{
+  "feasibilityScore": 9,
+  "siteBuildScore": 9,
+  "siteBuildReason": "Static site with vanilla JS date calculations. No backend needed — all logic runs client-side. Non-commercial focus on craft and shareability.",
+  "actionPlan": "1. Create index.html with DOB input form and result display area\n2. Implement regression-calculator.js: take DOB, compute current week, match against 4 regression windows (4mo, 8mo, 12mo, 18mo)\n3. Build printable plan template with CSS @media print styles\n4. Add progressive disclosure: show current window first, full timeline on expand\n5. Deploy to GitHub Pages with custom domain\n6. Add Open Graph meta tags for WhatsApp/social sharing previews\n7. Create shareable URL with DOB encoded as query param",
+  "differentiator": "Personalized exact-week prediction from DOB vs. generic age-range articles that force parents to self-diagnose which window they're in.",
+  "competitorUrls": ["https://www.littleones.co/blogs/our-blog/sleep-regressions", "https://huckleberrycare.com/blog/sleep-regression-ages"],
+  "dataSources": ["Embedded JSON: regression windows with signs/duration/tips sourced from pediatric sleep literature"],
+  "launchChecklist": "Day 1: Build calculator logic + basic UI. Day 2: Add printable plan generation + CSS print styles. Day 3: Polish mobile UX + add social sharing. Day 4: Deploy + set up analytics. Day 5: Post to r/NewParents, r/beyondthebump, share in parenting Facebook groups.",
+  "estimatedEffort": "4-6 hours MVP, 1-2 days polished v1",
+  "estimatedReward": "500-2000 visitors/month via SEO for 'baby sleep regression calculator'. High shareability in parent groups. Portfolio value: demonstrates user-centric single-purpose tool.",
+  "risks": "Medical disclaimer needed — must state 'not medical advice'. Mitigation: add clear disclaimer footer and cite sources.",
+  "monetizationChannels": [],
+  "affiliatePrograms": [],
+  "targetAudience": "First-time parents with babies 3-18 months, googling at 2am in distress. Found on r/NewParents, r/beyondthebump, What To Expect forums, local Facebook parenting groups.",
+  "distributionScore": 8,
+  "distributionChannels": [
+    {"method": "CommunityPosting", "description": "Post to r/NewParents (800k members) and r/beyondthebump (500k) with 'I built this free tool' framing", "effort": "Low", "expectedReach": "5000-15000 views"},
+    {"method": "SEO", "description": "Target 'baby sleep regression calculator' and 'when is my baby's next sleep regression' — low competition long-tail keywords", "effort": "Low", "expectedReach": "500-2000/month organic"},
+    {"method": "SocialMedia", "description": "Share in 3-5 parenting Facebook groups with personal story angle", "effort": "Low", "expectedReach": "2000-5000 views"}
+  ]
+}
+</output>
+</example>
 
-Required qualities:
-- Sharpen the Phase 1 concept into one buildable v1. Pick ONE architecture (static / static+API / full-stack) with reasoning.
-- Name exact pages/routes (e.g. "/", "/explore", "/item/:id", "/about").
-- For each step: name the exact tool, dataset, library, or API. No "find a dataset" — pick one.
-- ONE clear differentiator vs. existing alternatives.
-- "monetizationChannels" should be [] when non-commercial — focus on craft and reach instead.
-- Action plan format: plain text, numbered steps separated by \n. Example: "1. ...\n2. ...\n3. ..."
+<output_format>
+Respond with ONLY a single JSON object. No markdown fences, no explanation, no text before or after the JSON.
 
 {
   "feasibilityScore": <1-10, how realistic for solo dev + codegen agent>,
   "siteBuildScore": <1-10, how well a website serves this concept>,
-  "siteBuildReason": "<1-2 sentences: architecture choice and why; state if non-commercial>",
-  "actionPlan": "<5-9 numbered steps, each naming concrete tools/APIs/routes>",
+  "siteBuildReason": "<1-2 sentences: architecture choice and why>",
+  "actionPlan": "<5-9 numbered steps separated by \\n, each naming concrete tools/APIs/routes>",
   "differentiator": "<one sentence: the ONE thing this site does that competitors don't>",
   "competitorUrls": ["<URLs of closest existing sites>"],
   "dataSources": ["<exact API/dataset name and endpoint>"],
@@ -63,12 +94,7 @@ Required qualities:
   "targetAudience": "<specific persona: who, where they hang out, what they search for>",
   "distributionScore": <1-10>,
   "distributionChannels": [
-    {
-      "method": "<DirectOutreach|BacklinkRequest|SEO|CommunityPosting|SocialMedia|LaunchPlatform|EmailOutreach|NewsletterPlacement|ShowHN|ProductHunt>",
-      "description": "<1-2 sentences naming EXACT subreddit/forum/page/person>",
-      "effort": "<Low|Medium|High>",
-      "expectedReach": "<rough audience estimate>"
-    }
+    {"method": "<DirectOutreach|BacklinkRequest|SEO|CommunityPosting|SocialMedia|LaunchPlatform|EmailOutreach|NewsletterPlacement|ShowHN|ProductHunt>", "description": "<1-2 sentences naming EXACT subreddit/forum/page/person>", "effort": "<Low|Medium|High>", "expectedReach": "<rough audience estimate>"}
   ]
 }
 

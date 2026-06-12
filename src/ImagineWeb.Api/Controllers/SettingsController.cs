@@ -50,7 +50,7 @@ public class SettingsController : ControllerBase
     public async Task<IActionResult> GetCopilotModels(CancellationToken ct)
     {
         var models = await _copilotSdk.ListModelsAsync(ct);
-        return Ok(models.Where(m => m.SupportsReasoning).ToList());
+        return Ok(models);
     }
 
     /// <summary>

@@ -19,5 +19,5 @@ The search-topic queue has grown too large. Pick the {KeepCount} BEST queries to
 {TopicList}
 </pending_queries>
 
-Respond with ONLY a JSON array of exactly {KeepCount} query strings copied verbatim from the list:
+Respond with ONLY a JSON array of exactly {KeepCount} query strings copied verbatim from the list. No explanation, no text — just the array.
 ["best query 1", "best query 2"]

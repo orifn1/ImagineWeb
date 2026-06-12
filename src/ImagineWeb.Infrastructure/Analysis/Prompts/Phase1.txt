@@ -40,15 +40,17 @@ IMPORTANT CAPS:
 </scoring_rules>
 
 <thinking_steps>
-Before producing your JSON output, reason through these steps internally:
+Before producing JSON, evaluate:
 (a) What concrete material is on this page (data, lists, numbers, stories, mechanics)?
 (b) What is the SHARPEST single-purpose website this material could seed?
-(c) WHO is it for? Name a specific real person. If only a Hacker News reader, it's too narrow.
+(c) WHO is it for? Name a specific real person. If only a Hacker News reader → cap at 6.
 (d) WHAT emotion or life need does it hook? (parenting, money, sleep, dating, identity, nostalgia, food, health, faith, fear, humour)
 (e) Would they RETURN, SHARE in a non-dev chat, or PAY? If no to all three → score ≤5.
-(f) Is this "wrap a repo/dataset in a playground"? If yes → cap applies.
+(f) Is this "wrap a repo/dataset in a playground"? If yes → cap at 5.
 (g) Is the concept already done by 5+ existing sites? If yes → lower scores.
-(h) Buildable as static HTML/CSS/JS or tiny ASP.NET Core backend, deployable on Azure/GitHub Pages?
+(h) Buildable as static HTML/CSS/JS or tiny ASP.NET Core backend?
+
+Apply these checks strictly. Most pages score 3-5. Reserve 7+ for concepts that pass the human test.
 </thinking_steps>
 </instructions>
 
@@ -158,7 +160,7 @@ Title: {Title}
 </page>
 
 <output_format>
-Respond with a single JSON object. No markdown fences, no commentary before or after the JSON.
+Respond with ONLY a single JSON object. No markdown fences, no explanation, no reasoning, no text before or after the JSON.
 
 {
   "interestingnessScore": <1-10>,

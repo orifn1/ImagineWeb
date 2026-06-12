@@ -17,4 +17,5 @@ Produce 0-3 NEW search queries that push the pipeline into ground these pages co
 {PageSummaries}
 </pages>
 
-Respond with ONLY a JSON array: ["query 1", "query 2"] or []
+Respond with ONLY a JSON array of 0-3 queries. No explanation, no text — just the array.
+["query 1", "query 2"] or []

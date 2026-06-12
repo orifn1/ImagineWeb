@@ -21,4 +21,5 @@ You are a fast pre-screener for a website-idea discovery pipeline. From the cand
 {Results}
 </candidates>
 
-Respond with ONLY a JSON array of the 0-based indices of the top {TopN} candidates, ordered best-first. Example: [2, 0, 7, 4, 1]
+Respond with ONLY a JSON array of the 0-based indices of the top {TopN} candidates, ordered best-first. No explanation, no text — just the array.
+Example output: [2, 0, 7, 4, 1]

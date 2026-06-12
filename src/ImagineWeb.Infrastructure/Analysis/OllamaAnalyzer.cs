@@ -230,6 +230,7 @@ public class OllamaAnalyzer : IOllamaAnalyzer
 
     private static AnalysisResult ParsePhase1Response(string response)
     {
+        response = PageAnalyzer.StripResponseArtifacts(response);
         var jsonStart = response.IndexOf('{');
         var jsonEnd = response.LastIndexOf('}');
 
@@ -302,6 +303,7 @@ public class OllamaAnalyzer : IOllamaAnalyzer
     {
         var enriched = phase1.Clone();
 
+        response = PageAnalyzer.StripResponseArtifacts(response);
         var jsonStart = response.IndexOf('{');
         var jsonEnd = response.LastIndexOf('}');
 

@@ -12,13 +12,17 @@ public class PageAnalyzer : IPageAnalyzer
     private readonly ILlmClient _phase2Client;
     private readonly ILlmClient? _fallbackClient;
     private readonly ILogger<PageAnalyzer> _logger;
+    private readonly string? _phase1Model;
+    private readonly string? _phase2Model;
 
-    public PageAnalyzer(ILlmClient phase1Client, ILlmClient phase2Client, ILogger<PageAnalyzer> logger, ILlmClient? fallbackClient = null)
+    public PageAnalyzer(ILlmClient phase1Client, ILlmClient phase2Client, ILogger<PageAnalyzer> logger, ILlmClient? fallbackClient = null, string? phase1Model = null, string? phase2Model = null)
     {
         _phase1Client = phase1Client;
         _phase2Client = phase2Client;
         _fallbackClient = fallbackClient;
         _logger = logger;
+        _phase1Model = phase1Model;
+        _phase2Model = phase2Model;
     }
 
     public async Task<Result<AnalysisResult>> AnalyzePageAsync(string url, string title, string content, string? sessionContext, CompetitorContext? competitors, EnrichmentData? enrichment, CancellationToken ct)
@@ -42,8 +46,9 @@ public class PageAnalyzer : IPageAnalyzer
     {
         try
         {
+            var model = !string.IsNullOrEmpty(_phase1Model) ? _phase1Model : client.DefaultModel;
             var schema = client.SupportsStructuredOutput ? Phase1Schema : null;
-            var response = await client.GenerateAsync(prompt, client.DefaultModel, schema, maxTokens: null, ct);
+            var response = await client.GenerateAsync(prompt, model, schema, maxTokens: null, ct);
             var result = ParsePhase1Response(response);
             result.AnalysisProvider = client.ProviderName;
 
@@ -64,33 +69,50 @@ public class PageAnalyzer : IPageAnalyzer
     {
         var prompt = BuildPhase2Prompt(phase1, url, title, competitors, domainContext);
 
-        var result = await AttemptPhase2Async(prompt, url, phase1, _phase2Client, ct);
-
-        if (!result.IsSuccess && _fallbackClient is not null
-            && !_fallbackClient.ProviderName.Equals(_phase2Client.ProviderName, StringComparison.OrdinalIgnoreCase))
+        const int maxAttempts = 3;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
-            _logger.LogWarning("Phase2 failed with {Provider}, trying fallback {Fallback} for {Url}",
-                _phase2Client.ProviderName, _fallbackClient.ProviderName, url);
-            result = await AttemptPhase2Async(prompt, url, phase1, _fallbackClient, ct);
+            var result = await AttemptPhase2Async(prompt, url, phase1, _phase2Client, ct);
+
+            if (result.IsSuccess)
+                return result;
+
+            if (_fallbackClient is not null
+                && !_fallbackClient.ProviderName.Equals(_phase2Client.ProviderName, StringComparison.OrdinalIgnoreCase))
+            {
+                result = await AttemptPhase2Async(prompt, url, phase1, _fallbackClient, ct);
+                if (result.IsSuccess)
+                    return result;
+            }
+
+            if (attempt < maxAttempts)
+            {
+                _logger.LogInformation("Phase2 attempt {Attempt}/{Max} failed for {Url}, retrying after delay...", attempt, maxAttempts, url);
+                await Task.Delay(TimeSpan.FromSeconds(3 * attempt), ct);
+            }
         }
 
-        if (!result.IsSuccess)
-        {
-            _logger.LogWarning("All Phase2 providers failed for {Url}, keeping Phase1 results", url);
-            phase1.Phase2Skipped = true;
-            return Result<AnalysisResult>.Success(phase1);
-        }
-
-        return result;
+        _logger.LogWarning("All Phase2 attempts failed for {Url}, keeping Phase1 results", url);
+        phase1.Phase2Skipped = true;
+        return Result<AnalysisResult>.Success(phase1);
     }
 
     private async Task<Result<AnalysisResult>> AttemptPhase2Async(string prompt, string url, AnalysisResult phase1, ILlmClient client, CancellationToken ct)
     {
         try
         {
+            var model = !string.IsNullOrEmpty(_phase2Model) ? _phase2Model : client.DefaultModel;
             var schema = client.SupportsStructuredOutput ? Phase2Schema : null;
-            var response = await client.GenerateAsync(prompt, client.DefaultModel, schema, maxTokens: null, ct);
+            var response = await client.GenerateAsync(prompt, model, schema, maxTokens: null, ct);
             var enriched = ParsePhase2Response(response, phase1);
+
+            if (enriched.Phase2Skipped)
+            {
+                _logger.LogWarning("[{Provider}] Phase2 response could not be parsed for {Url}. Response ({Len} chars): {Preview}",
+                    client.ProviderName, url, response.Length, response.Length > 500 ? response[..500] : response);
+                return Result<AnalysisResult>.Failure($"Phase2 response parsing failed ({client.ProviderName})");
+            }
+
             enriched.AnalysisProvider = client.ProviderName;
 
             _logger.LogInformation("[{Provider}] Phase2 {Url}: Feasibility={Feas}, Effort={Eff}, Reward={Rew}",
@@ -279,6 +301,10 @@ public class PageAnalyzer : IPageAnalyzer
     private static string StripMarkdownFences(string response)
     {
         var trimmed = response.Trim();
+
+        // Strip <thinking>...</thinking> reasoning blocks (common with reasoning models)
+        trimmed = StripReasoningBlocks(trimmed);
+
         // Strip ```json ... ``` or ``` ... ``` wrappers (common with thinking models)
         if (trimmed.StartsWith("```"))
         {
@@ -291,15 +317,43 @@ public class PageAnalyzer : IPageAnalyzer
         return trimmed;
     }
 
+    /// <summary>
+    /// Strips reasoning/thinking blocks and markdown fences from LLM responses. Shared utility.
+    /// </summary>
+    public static string StripResponseArtifacts(string response)
+    {
+        return StripMarkdownFences(response);
+    }
+
+    private static string StripReasoningBlocks(string text)
+    {
+        // Remove <thinking>...</thinking>, <reasoning>...</reasoning>, <analysis>...</analysis> blocks
+        var result = text;
+        foreach (var tag in new[] { "thinking", "reasoning", "analysis", "reflection", "scratchpad" })
+        {
+            while (true)
+            {
+                var openTag = result.IndexOf($"<{tag}>", StringComparison.OrdinalIgnoreCase);
+                if (openTag < 0) openTag = result.IndexOf($"<{tag} ", StringComparison.OrdinalIgnoreCase);
+                if (openTag < 0) break;
+
+                var closeTag = result.IndexOf($"</{tag}>", openTag, StringComparison.OrdinalIgnoreCase);
+                if (closeTag < 0) break;
+
+                var endOfClose = closeTag + tag.Length + 3; // </ + tag + >
+                result = result[..openTag] + result[endOfClose..];
+            }
+        }
+        return result.Trim();
+    }
+
     private AnalysisResult ParsePhase1Response(string response)
     {
         response = StripMarkdownFences(response);
-        var jsonStart = response.IndexOf('{');
-        var jsonEnd = response.LastIndexOf('}');
+        var jsonStr = ExtractJsonObject(response);
 
-        if (jsonStart >= 0 && jsonEnd > jsonStart)
+        if (jsonStr is not null)
         {
-            var jsonStr = response[jsonStart..(jsonEnd + 1)];
             try
             {
                 var parsed = JsonSerializer.Deserialize<Phase1JsonResponse>(jsonStr, new JsonSerializerOptions
@@ -376,12 +430,13 @@ public class PageAnalyzer : IPageAnalyzer
         var enriched = phase1.Clone();
 
         response = StripMarkdownFences(response);
-        var jsonStart = response.IndexOf('{');
-        var jsonEnd = response.LastIndexOf('}');
 
-        if (jsonStart >= 0 && jsonEnd > jsonStart)
+        // Try to find a valid JSON object — the model may include reasoning text before JSON.
+        // Strategy: try from last '{' backwards, then fall back to first '{' to last '}'.
+        var jsonStr = ExtractJsonObject(response);
+
+        if (jsonStr is not null)
         {
-            var jsonStr = response[jsonStart..(jsonEnd + 1)];
             try
             {
                 var parsed = JsonSerializer.Deserialize<Phase2JsonResponse>(jsonStr, new JsonSerializerOptions
@@ -450,11 +505,168 @@ public class PageAnalyzer : IPageAnalyzer
             {
                 _logger.LogWarning(ex, "Phase2 JSON deserialization failed. Raw ({Len} chars): {Preview}",
                     response.Length, response.Length > 300 ? response[..300] : response);
+
+                // Fallback: try lenient extraction using JsonNode for partial results
+                try
+                {
+                    var node = JsonNode.Parse(jsonStr);
+                    if (node is not null)
+                    {
+                        enriched.FeasibilityScore = Math.Clamp(node["feasibilityScore"]?.GetValue<int>() ?? node["FeasibilityScore"]?.GetValue<int>() ?? 0, 1, 10);
+                        enriched.ActionPlan = (node["actionPlan"] ?? node["ActionPlan"])?.GetValue<string>() ?? "";
+                        enriched.EstimatedEffort = (node["estimatedEffort"] ?? node["EstimatedEffort"])?.GetValue<string>() ?? "";
+                        enriched.EstimatedReward = (node["estimatedReward"] ?? node["EstimatedReward"])?.GetValue<string>() ?? "";
+                        enriched.Differentiator = (node["differentiator"] ?? node["Differentiator"])?.GetValue<string>() ?? "";
+                        enriched.Risks = (node["risks"] ?? node["Risks"])?.GetValue<string>() ?? "";
+                        enriched.TargetAudience = (node["targetAudience"] ?? node["TargetAudience"])?.GetValue<string>() ?? "";
+                        enriched.LaunchChecklist = (node["launchChecklist"] ?? node["LaunchChecklist"])?.GetValue<string>() ?? "";
+
+                        var siteBuildScore = (node["siteBuildScore"] ?? node["SiteBuildScore"])?.GetValue<int>() ?? 0;
+                        if (siteBuildScore > 0) enriched.SiteBuildScore = Math.Clamp(siteBuildScore, 1, 10);
+                        enriched.SiteBuildReason = (node["siteBuildReason"] ?? node["SiteBuildReason"])?.GetValue<string>() ?? "";
+
+                        var distScore = (node["distributionScore"] ?? node["DistributionScore"])?.GetValue<int>() ?? 0;
+                        if (distScore > 0) enriched.DistributionScore = Math.Clamp(distScore, 1, 10);
+
+                        _logger.LogInformation("Phase2 partial extraction succeeded for response with deserialization error");
+                        return enriched;
+                    }
+                }
+                catch
+                {
+                    // Partial extraction also failed, continue to Phase2Skipped
+                }
             }
         }
 
         enriched.Phase2Skipped = true;
         return enriched;
+    }
+
+    /// <summary>
+    /// Extracts a JSON object from text that may contain reasoning/preamble before the JSON.
+    /// Tries brace-matching from multiple candidate start positions.
+    /// </summary>
+    private static string? ExtractJsonObject(string text)
+    {
+        // First try: simple first-{ to last-}
+        var firstBrace = text.IndexOf('{');
+        var lastBrace = text.LastIndexOf('}');
+        if (firstBrace < 0 || lastBrace <= firstBrace) return null;
+
+        var candidate = text[firstBrace..(lastBrace + 1)];
+        if (IsValidJson(candidate)) return candidate;
+
+        // Second try: find the last top-level JSON object using brace matching
+        // Scan backwards from the last '}' to find its matching '{'
+        var depth = 0;
+        for (var i = lastBrace; i >= 0; i--)
+        {
+            if (text[i] == '}') depth++;
+            else if (text[i] == '{') depth--;
+
+            if (depth == 0)
+            {
+                candidate = text[i..(lastBrace + 1)];
+                if (IsValidJson(candidate)) return candidate;
+                break;
+            }
+        }
+
+        // Third try: find the first '{' that starts a "feasibilityScore" object
+        var marker = text.IndexOf("\"feasibilityScore\"", StringComparison.OrdinalIgnoreCase);
+        if (marker > 0)
+        {
+            var braceBeforeMarker = text.LastIndexOf('{', marker);
+            if (braceBeforeMarker >= 0)
+            {
+                candidate = text[braceBeforeMarker..(lastBrace + 1)];
+                if (IsValidJson(candidate)) return candidate;
+            }
+        }
+
+        // Fourth try: repair truncated JSON by closing unclosed braces/brackets
+        if (firstBrace >= 0)
+        {
+            var truncated = text[firstBrace..];
+            var repaired = RepairTruncatedJson(truncated);
+            if (repaired is not null && IsValidJson(repaired)) return repaired;
+        }
+
+        return null;
+    }
+
+    private static string? RepairTruncatedJson(string text)
+    {
+        // Count unclosed braces and brackets, close them
+        var braceCount = 0;
+        var bracketCount = 0;
+        var inString = false;
+        var escape = false;
+
+        for (var i = 0; i < text.Length; i++)
+        {
+            var c = text[i];
+            if (escape) { escape = false; continue; }
+            if (c == '\\' && inString) { escape = true; continue; }
+            if (c == '"') { inString = !inString; continue; }
+            if (inString) continue;
+
+            switch (c)
+            {
+                case '{': braceCount++; break;
+                case '}': braceCount--; break;
+                case '[': bracketCount++; break;
+                case ']': bracketCount--; break;
+            }
+        }
+
+        if (braceCount <= 0 && bracketCount <= 0) return null; // Not truncated
+
+        // Remove any trailing partial key-value (cut at last complete value)
+        var lastComplete = text.LastIndexOfAny([',', '{', '[', '}', ']']);
+        if (lastComplete > 0)
+        {
+            var trimmed = text[..(lastComplete + 1)].TrimEnd();
+            // Remove trailing comma if present
+            if (trimmed.EndsWith(','))
+                trimmed = trimmed[..^1];
+
+            // Recount braces for trimmed version
+            braceCount = 0; bracketCount = 0; inString = false; escape = false;
+            for (var i = 0; i < trimmed.Length; i++)
+            {
+                var c = trimmed[i];
+                if (escape) { escape = false; continue; }
+                if (c == '\\' && inString) { escape = true; continue; }
+                if (c == '"') { inString = !inString; continue; }
+                if (inString) continue;
+                switch (c)
+                {
+                    case '{': braceCount++; break;
+                    case '}': braceCount--; break;
+                    case '[': bracketCount++; break;
+                    case ']': bracketCount--; break;
+                }
+            }
+
+            var sb = new System.Text.StringBuilder(trimmed);
+            for (var i = 0; i < bracketCount; i++) sb.Append(']');
+            for (var i = 0; i < braceCount; i++) sb.Append('}');
+            return sb.ToString();
+        }
+
+        return null;
+    }
+
+    private static bool IsValidJson(string text)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(text);
+            return doc.RootElement.ValueKind == JsonValueKind.Object;
+        }
+        catch { return false; }
     }
 
     private static List<string> ParseSuggestions(string response)

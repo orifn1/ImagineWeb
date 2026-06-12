@@ -50,14 +50,11 @@ public sealed class CopilotSdkLlmClient : ILlmClient, IAsyncDisposable
         if (!string.IsNullOrEmpty(_config.ReasoningEffort))
             sessionConfig.ReasoningEffort = _config.ReasoningEffort;
 
-        if (responseSchema is not null)
+        sessionConfig.SystemMessage = new SystemMessageConfig
         {
-            sessionConfig.SystemMessage = new SystemMessageConfig
-            {
-                Mode = SystemMessageMode.Append,
-                Content = "Respond with valid JSON only. No markdown fences, no explanation outside the JSON object."
-            };
-        }
+            Mode = SystemMessageMode.Append,
+            Content = "Follow the output format specified in the user's instructions exactly. Do not include any preamble, reasoning, explanation, or commentary outside the requested format. If JSON is requested, respond with the JSON object only."
+        };
 
         var session = await client.CreateSessionAsync(sessionConfig);
         var idleTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
